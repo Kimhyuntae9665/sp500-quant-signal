@@ -1,0 +1,74 @@
+plugins {
+    id "com.android.application"
+}
+
+def releasePropertiesFile = rootProject.file("keystore.properties")
+def releaseProperties = new Properties()
+def hasReleaseSigning = releasePropertiesFile.exists()
+if (hasReleaseSigning) {
+    releasePropertiesFile.withInputStream { releaseProperties.load(it) }
+}
+def privatePropertiesFile = rootProject.file("private.properties")
+def privateProperties = new Properties()
+if (privatePropertiesFile.exists()) {
+    privatePropertiesFile.withInputStream { privateProperties.load(it) }
+}
+def defaultServerUrl = privateProperties.getProperty("defaultServerUrl", "")
+def escapedDefaultServerUrl = defaultServerUrl.replace("\\", "\\\\").replace('"', '\\"')
+
+android {
+    namespace "com.hyuntae.quantviewer"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.hyuntae.quantviewer"
+        minSdk 24
+        targetSdk 34
+        versionCode 2
+        versionName "1.1.0"
+        buildConfigField "String", "DEFAULT_SERVER_URL", "\"${escapedDefaultServerUrl}\""
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile rootProject.file(releaseProperties["storeFile"])
+                storePassword releaseProperties["storePassword"]
+                keyAlias releaseProperties["keyAlias"]
+                keyPassword releaseProperties["keyPassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            } else {
+                // Personal sideload fallback: optimized release, signed by this PC's stable debug key.
+                signingConfig signingConfigs.debug
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
+    }
+}

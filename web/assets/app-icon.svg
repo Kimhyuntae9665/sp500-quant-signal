@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">S&amp;P 500 퀀트 시그널</title>
+  <desc id="desc">민트색 바탕 위 상승하는 네 개의 데이터 점</desc>
+  <rect width="512" height="512" rx="112" fill="#e8f5ee"/>
+  <rect x="54" y="54" width="404" height="404" rx="92" fill="#fffdf8" stroke="#b7dfcc" stroke-width="12"/>
+  <g fill="none" stroke="#0d684d" stroke-linecap="round" stroke-linejoin="round" stroke-width="28">
+    <path d="M132 354V277M215 354V221M298 354V157M381 354V238"/>
+    <path d="m132 244 83-56 83-64 83 81"/>
+  </g>
+  <g fill="#168463" stroke="#fffdf8" stroke-width="14">
+    <circle cx="132" cy="244" r="25"/>
+    <circle cx="215" cy="188" r="25"/>
+    <circle cx="298" cy="124" r="25"/>
+    <circle cx="381" cy="205" r="25"/>
+  </g>
+</svg>

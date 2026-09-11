@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Tests and tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.playwright-cli/
+output/
+
+# Runtime data and local credentials
+.env
+.env.*
+!.env.example
+.cache/
+.runtime/
+data/cache/
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite-*
+data/*.sqlite3
+data/*.sqlite3-*
+*.log
+
+# Android build outputs and private signing material
+android-app/.gradle/
+android-app/app/build/
+android-app/build/
+android-app/local.properties
+android-app/keystore.properties
+android-app/private.properties
+android-app/*.jks
+android-app/*.keystore
+*.apk
+*.aab
+dist/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

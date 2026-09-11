@@ -1,0 +1,80 @@
+{
+  "id": "./",
+  "name": "S&P 500 퀀트 시그널",
+  "short_name": "퀀트 시그널",
+  "description": "S&P 500 퀀트 시그널과 미국·KOSPI·KRX 금 포트폴리오 시각화를 제공하는 개인용 보드",
+  "lang": "ko-KR",
+  "dir": "ltr",
+  "start_url": "./#board",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#f5f3ec",
+  "theme_color": "#f7f5ef",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "./assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/app-icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./assets/app-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/app-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "시그널 보드",
+      "short_name": "시그널",
+      "url": "./#board",
+      "icons": [{ "src": "./assets/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "종목 상세",
+      "short_name": "종목",
+      "url": "./#detail",
+      "icons": [{ "src": "./assets/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "점수 규칙",
+      "short_name": "규칙",
+      "url": "./#rules",
+      "icons": [{ "src": "./assets/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "내 포트 구성",
+      "short_name": "내 포트",
+      "url": "./#portfolio",
+      "icons": [{ "src": "./assets/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

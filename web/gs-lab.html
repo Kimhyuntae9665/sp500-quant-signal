@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#F2F4EF">
+  <meta name="description" content="개인 연구용 GS Quant Risk Lab. 포트폴리오의 누적 경로, 낙폭, 위험기여와 SPY 충격 민감도를 확인합니다.">
+  <title>GS Quant Risk Lab · 개인 리스크 연구실</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231E4F8C'/%3E%3Cpath d='M8 8h16v16H8z' fill='none' stroke='%23F2F4EF' stroke-width='3'/%3E%3Cpath d='M8 20h16' stroke='%23D3A82A' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/gs-lab.css?v=3">
+  <script src="/gs-lab.js?v=3" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">본문으로 바로가기</a>
+
+  <header class="lab-header">
+    <div class="lab-header__inner">
+      <a class="lab-brand" href="/#portfolio" title="S&P 500 퀀트 시그널의 포트폴리오 화면으로 돌아가기">
+        <span class="lab-brand__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="lab-brand__copy"><strong>GS QUANT</strong><span>RISK LAB</span></span>
+      </a>
+      <nav class="lab-nav" aria-label="리스크 연구실 내 이동">
+        <a href="#workspace">입력 설계</a>
+        <a href="#results">결과 판독</a>
+        <a href="#method">산식·출처</a>
+      </nav>
+      <a class="back-link" href="/#portfolio"><span aria-hidden="true">←</span> 포트폴리오로 돌아가기</a>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="lab-hero" aria-labelledby="page-title">
+      <div class="lab-hero__copy">
+        <p class="eyebrow"><span class="eyebrow__line" aria-hidden="true"></span>PERSONAL RESEARCH / RISK ENGINEERING</p>
+        <h1 id="page-title">포트폴리오의<br><em>균열을 먼저 그립니다.</em></h1>
+        <p class="hero-lede">수익률을 예측하는 화면이 아니라, 어떤 충격에서 무엇이 먼저 흔들리는지 확인하는 연구 도구입니다. 입력한 비중과 실제 분석 응답의 시계열을 한 장의 설계도로 겹쳐 봅니다.</p>
+        <div class="hero-notation" aria-label="리스크 계산의 기본 표기">
+          <span>β</span><b>×</b><span>SPY shock</span><b>×</b><span>weight</span><b>→</b><strong>estimated contribution</strong>
+        </div>
+      </div>
+
+      <section class="shock-panel" aria-labelledby="shock-title">
+        <div class="panel-kicker panel-kicker--inverse">LIVE SCENARIO / MARKET SHOCK</div>
+        <div class="shock-panel__heading">
+          <div>
+            <h2 id="shock-title">SPY shock rail</h2>
+            <p>시장 충격을 움직여 포지션별 추정 기여를 확인하세요.</p>
+          </div>
+          <output class="shock-panel__big-value data-number" id="shock-value" for="shock-range">-10.0%</output>
+        </div>
+        <div class="shock-rail" aria-label="SPY 시장 충격 조절 구간">
+          <div class="shock-rail__labels" aria-hidden="true"><span>-30%</span><span>0%</span><span>+20%</span></div>
+          <input id="shock-range" type="range" min="-30" max="20" step="1" value="-10" aria-label="SPY 시장 충격" aria-describedby="shock-help">
+          <div class="shock-rail__ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="shock-panel__result">
+          <span class="label">포트폴리오 추정 변화</span>
+          <strong id="shock-impact">분석 실행 후 반환된 β로 계산</strong>
+        </div>
+        <p class="shock-panel__formula" id="shock-help"><span>선형 추정치</span> = β × 시장 충격 × 포지션 비중</p>
+        <p class="shock-panel__caveat">상관관계와 β는 시장 국면에서 변할 수 있습니다. 파생상품 재가격이나 실제 체결 손익을 계산하지 않습니다.</p>
+        <div class="scenario-contrib" id="scenario-position-contrib" aria-live="polite">
+          <div class="scenario-empty">분석을 실행하면 포지션별 기여가 이곳에 표시됩니다.</div>
+        </div>
+      </section>
+    </section>
+
+    <section class="disclosure-band" aria-labelledby="disclosure-title">
+      <div class="disclosure-band__flag">UNOFFICIAL / PERSONAL PROJECT</div>
+      <div class="disclosure-band__body">
+        <h2 id="disclosure-title">이 화면의 성격을 먼저 확인하세요.</h2>
+        <p>GS Quant 오픈소스 함수와 Yahoo/yfinance 벤더 데이터를 사용하는 비공식 개인 연구 프로젝트입니다. Goldman Sachs Marquee 기관용 API 자격증명은 사용하지 않습니다.</p>
+        <p class="disclosure-band__strong">Goldman Sachs의 소속·제휴·승인·보증을 의미하지 않으며, 주문 실행을 하지 않고 투자자문도 아닙니다.</p>
+      </div>
+      <div class="disclosure-band__links" aria-label="공식 참고 링크">
+        <a href="https://github.com/goldmansachs/gs-quant" target="_blank" rel="noopener noreferrer">공식 GitHub repo <span aria-hidden="true">↗</span></a>
+        <a href="https://developer.gs.com/docs/gsquant/pricing-and-risk/portfolios/" target="_blank" rel="noopener noreferrer">Portfolios docs <span aria-hidden="true">↗</span></a>
+        <a href="https://developer.gs.com/docs/gsquant/pricing-and-risk/scenarios/" target="_blank" rel="noopener noreferrer">Scenarios docs <span aria-hidden="true">↗</span></a>
+        <a href="https://github.com/goldmansachs/gs-quant/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">Apache-2.0 license <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="workspace-section" id="workspace" aria-labelledby="workspace-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">01 / INPUT BLUEPRINT</p>
+          <h2 id="workspace-title">분석할 포트폴리오를 설계하세요.</h2>
+          <p>2–12개 미국 상장 종목 또는 ETF를 입력합니다. 비중 합계가 100%가 되어야 분석을 요청할 수 있습니다.</p>
+        </div>
+        <span class="section-index" aria-hidden="true">01</span>
+      </div>
+
+      <form id="risk-form" class="workspace-form" novalidate>
+        <div class="workspace-grid">
+          <aside class="control-panel" aria-labelledby="control-title">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">MODEL CONTROLS</p>
+                <h3 id="control-title">실험 조건</h3>
+              </div>
+              <span class="panel-stamp">API v1</span>
+            </div>
+
+            <fieldset class="settings-fieldset">
+              <legend class="sr-only">분석 조건</legend>
+              <label class="field-label" for="benchmark">벤치마크 <span class="required-mark" aria-hidden="true">*</span></label>
+              <input class="text-input data-input" id="benchmark" name="benchmark" type="text" value="SPY" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="benchmark-help benchmark-error">
+              <p class="field-help" id="benchmark-help">분석 API에 보낼 기준 티커입니다.</p>
+              <p class="field-error" id="benchmark-error" role="alert" hidden></p>
+
+              <label class="field-label" for="lookback">가격 구간 <span class="required-mark" aria-hidden="true">*</span></label>
+              <select class="text-input data-input" id="lookback" name="lookback" aria-describedby="lookback-help">
+                <option value="1y">1년 · 1y</option>
+                <option value="3y" selected>3년 · 3y</option>
+                <option value="5y">5년 · 5y</option>
+              </select>
+              <p class="field-help" id="lookback-help">반환 시계열과 변동성 계산 창을 선택합니다.</p>
+
+              <label class="field-label" for="risk-free-rate">무위험 수익률 <span class="required-mark" aria-hidden="true">*</span></label>
+              <span class="input-with-suffix">
+                <input class="text-input data-input" id="risk-free-rate" name="risk_free_rate_pct" type="number" min="0" max="20" step="0.1" value="4.0" inputmode="decimal" aria-describedby="risk-free-help risk-free-error">
+                <span aria-hidden="true">%</span>
+              </span>
+              <p class="field-help" id="risk-free-help">연율 기준 0–20% 입력값입니다. 샤프 비율 계산에만 사용됩니다.</p>
+              <p class="field-error" id="risk-free-error" role="alert" hidden></p>
+            </fieldset>
+
+            <div class="control-divider" aria-hidden="true"></div>
+
+            <div class="import-block">
+              <div class="import-block__heading"><strong>저장된 포트폴리오</strong><span class="mini-tag">LOCAL ONLY</span></div>
+              <p>키 <code>sp500-quant-signal.portfolio.v1</code>에서 미국 자산만 읽어 시세를 구성합니다.</p>
+              <button class="secondary-button full-width" id="import-portfolio" type="button">US 포지션 가져오기</button>
+              <p class="import-status" id="import-status" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="control-actions">
+              <button class="primary-button analyze-button" id="analyze-button" type="submit"><span class="button-label">리스크 분석 실행</span><span class="button-spinner" aria-hidden="true"></span></button>
+              <button class="text-button" id="reset-example" type="button">최근 검토 예시로 되돌리기</button>
+            </div>
+            <p class="form-error" id="form-error" role="alert" aria-live="assertive"></p>
+          </aside>
+
+          <section class="positions-panel" aria-labelledby="positions-title">
+            <div class="panel-heading panel-heading--positions">
+              <div>
+                <p class="panel-kicker">POSITION WEIGHTS</p>
+                <h3 id="positions-title">비중 테이블</h3>
+              </div>
+              <div class="position-count"><strong id="position-count">9</strong><span>/ 12 rows</span></div>
+            </div>
+            <div class="example-note"><span class="example-note__mark" aria-hidden="true">REVIEW</span><span>최근 검토용 예시 바스켓 · 중개계좌 보유 명세가 아닙니다.</span></div>
+
+            <div class="positions-table-wrap">
+              <table class="positions-table" aria-describedby="positions-help">
+                <caption class="sr-only">분석 대상 포지션과 비중</caption>
+                <thead>
+                  <tr><th scope="col">#</th><th scope="col">티커</th><th scope="col">비중</th><th scope="col"><span class="sr-only">행 동작</span></th></tr>
+                </thead>
+                <tbody id="position-rows">
+                  <tr data-position-row="0"><td class="position-index">01</td><td><label class="sr-only" for="symbol-0">포지션 1 티커</label><input class="row-input symbol-input" id="symbol-0" data-position-symbol="0" name="symbol-0" type="text" value="CVX" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-0"><span class="field-error row-error" id="symbol-error-0" role="alert" hidden></span></td><td><label class="sr-only" for="weight-0">CVX 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-0" data-position-weight="0" name="weight-0" type="number" min="0.01" max="100" step="0.01" value="12.00" inputmode="decimal" aria-describedby="weight-error-0"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-0" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="0" aria-label="CVX 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="1"><td class="position-index">02</td><td><label class="sr-only" for="symbol-1">포지션 2 티커</label><input class="row-input symbol-input" id="symbol-1" data-position-symbol="1" name="symbol-1" type="text" value="PEP" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-1"><span class="field-error row-error" id="symbol-error-1" role="alert" hidden></span></td><td><label class="sr-only" for="weight-1">PEP 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-1" data-position-weight="1" name="weight-1" type="number" min="0.01" max="100" step="0.01" value="12.00" inputmode="decimal" aria-describedby="weight-error-1"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-1" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="1" aria-label="PEP 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="2"><td class="position-index">03</td><td><label class="sr-only" for="symbol-2">포지션 3 티커</label><input class="row-input symbol-input" id="symbol-2" data-position-symbol="2" name="symbol-2" type="text" value="TLT" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-2"><span class="field-error row-error" id="symbol-error-2" role="alert" hidden></span></td><td><label class="sr-only" for="weight-2">TLT 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-2" data-position-weight="2" name="weight-2" type="number" min="0.01" max="100" step="0.01" value="14.00" inputmode="decimal" aria-describedby="weight-error-2"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-2" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="2" aria-label="TLT 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="3"><td class="position-index">04</td><td><label class="sr-only" for="symbol-3">포지션 4 티커</label><input class="row-input symbol-input" id="symbol-3" data-position-symbol="3" name="symbol-3" type="text" value="SPGI" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-3"><span class="field-error row-error" id="symbol-error-3" role="alert" hidden></span></td><td><label class="sr-only" for="weight-3">SPGI 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-3" data-position-weight="3" name="weight-3" type="number" min="0.01" max="100" step="0.01" value="12.00" inputmode="decimal" aria-describedby="weight-error-3"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-3" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="3" aria-label="SPGI 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="4"><td class="position-index">05</td><td><label class="sr-only" for="symbol-4">포지션 5 티커</label><input class="row-input symbol-input" id="symbol-4" data-position-symbol="4" name="symbol-4" type="text" value="KMB" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-4"><span class="field-error row-error" id="symbol-error-4" role="alert" hidden></span></td><td><label class="sr-only" for="weight-4">KMB 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-4" data-position-weight="4" name="weight-4" type="number" min="0.01" max="100" step="0.01" value="10.00" inputmode="decimal" aria-describedby="weight-error-4"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-4" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="4" aria-label="KMB 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="5"><td class="position-index">06</td><td><label class="sr-only" for="symbol-5">포지션 6 티커</label><input class="row-input symbol-input" id="symbol-5" data-position-symbol="5" name="symbol-5" type="text" value="PRU" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-5"><span class="field-error row-error" id="symbol-error-5" role="alert" hidden></span></td><td><label class="sr-only" for="weight-5">PRU 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-5" data-position-weight="5" name="weight-5" type="number" min="0.01" max="100" step="0.01" value="12.00" inputmode="decimal" aria-describedby="weight-error-5"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-5" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="5" aria-label="PRU 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="6"><td class="position-index">07</td><td><label class="sr-only" for="symbol-6">포지션 7 티커</label><input class="row-input symbol-input" id="symbol-6" data-position-symbol="6" name="symbol-6" type="text" value="WFC" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-6"><span class="field-error row-error" id="symbol-error-6" role="alert" hidden></span></td><td><label class="sr-only" for="weight-6">WFC 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-6" data-position-weight="6" name="weight-6" type="number" min="0.01" max="100" step="0.01" value="12.00" inputmode="decimal" aria-describedby="weight-error-6"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-6" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="6" aria-label="WFC 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="7"><td class="position-index">08</td><td><label class="sr-only" for="symbol-7">포지션 8 티커</label><input class="row-input symbol-input" id="symbol-7" data-position-symbol="7" name="symbol-7" type="text" value="PG" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-7"><span class="field-error row-error" id="symbol-error-7" role="alert" hidden></span></td><td><label class="sr-only" for="weight-7">PG 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-7" data-position-weight="7" name="weight-7" type="number" min="0.01" max="100" step="0.01" value="8.00" inputmode="decimal" aria-describedby="weight-error-7"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-7" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="7" aria-label="PG 포지션 삭제">×</button></td></tr>
+                  <tr data-position-row="8"><td class="position-index">09</td><td><label class="sr-only" for="symbol-8">포지션 9 티커</label><input class="row-input symbol-input" id="symbol-8" data-position-symbol="8" name="symbol-8" type="text" value="VICI" maxlength="15" autocomplete="off" spellcheck="false" aria-describedby="symbol-error-8"><span class="field-error row-error" id="symbol-error-8" role="alert" hidden></span></td><td><label class="sr-only" for="weight-8">VICI 비중</label><span class="input-with-suffix input-with-suffix--row"><input class="row-input weight-input" id="weight-8" data-position-weight="8" name="weight-8" type="number" min="0.01" max="100" step="0.01" value="8.00" inputmode="decimal" aria-describedby="weight-error-8"><span aria-hidden="true">%</span></span><span class="field-error row-error" id="weight-error-8" role="alert" hidden></span></td><td><button class="remove-row" type="button" data-remove-position="8" aria-label="VICI 포지션 삭제">×</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="field-help positions-help" id="positions-help">티커는 미국 상장 종목 또는 ETF 형식으로 입력합니다. 삭제는 최소 2행까지 가능합니다.</p>
+            <div class="position-toolbar">
+              <div class="position-toolbar__actions">
+                <button class="secondary-button" id="add-position" type="button">+ 행 추가</button>
+                <button class="secondary-button" id="equal-weight" type="button">동일 비중</button>
+                <button class="secondary-button" id="normalize-weight" type="button">합계 100% 정규화</button>
+              </div>
+              <div class="weight-total" aria-live="polite"><span>입력 합계</span><strong id="weight-total">100.00%</strong><small id="weight-state">분석 가능</small></div>
+            </div>
+          </section>
+        </div>
+      </form>
+    </section>
+
+    <section class="results-section" id="results" aria-labelledby="results-title" aria-busy="false">
+      <div class="section-heading section-heading--results">
+        <div>
+          <p class="section-kicker">02 / RETURNED SURFACE</p>
+          <h2 id="results-title">실제 반환 계열로 그린 위험 지형.</h2>
+          <p>분석 응답의 `schema_version: gs-risk-lab-v1`을 기준으로 수익 경로, 낙폭, 기여도와 상관을 렌더링합니다.</p>
+        </div>
+        <div class="schema-stamp"><span>SCHEMA</span><code id="schema-version">gs-risk-lab-v1</code></div>
+      </div>
+
+      <div class="state-banner state-empty" id="result-state" data-state="empty" role="status" aria-live="polite">
+        <span class="state-banner__mark" aria-hidden="true">○</span>
+        <div><strong>아직 분석 결과가 없습니다.</strong><p>비중과 조건을 확인한 뒤 리스크 분석을 실행하세요. 이 영역은 API 응답이 도착하면 채워집니다.</p></div>
+      </div>
+      <div class="partial-notice" id="partial-notice" role="status" aria-live="polite" hidden></div>
+
+      <div class="metric-grid" id="metric-grid" aria-label="핵심 리스크 지표">
+        <article class="metric-cell"><span>연환산 수익률</span><strong data-metric="annualized_return_pct">—</strong><small>% / returned</small></article>
+        <article class="metric-cell"><span>연환산 변동성</span><strong data-metric="annualized_volatility_pct">—</strong><small>% / returned</small></article>
+        <article class="metric-cell metric-cell--risk"><span>최대 낙폭</span><strong data-metric="max_drawdown_pct">—</strong><small>% / returned</small></article>
+        <article class="metric-cell"><span>샤프 비율</span><strong data-metric="sharpe_ratio">—</strong><small>risk-free 반영</small></article>
+        <article class="metric-cell"><span>포트폴리오 β</span><strong data-metric="beta">—</strong><small>vs benchmark</small></article>
+        <article class="metric-cell"><span>관측치</span><strong data-metric="observations">—</strong><small>일별 수익률 행</small></article>
+        <article class="metric-cell metric-cell--risk"><span>95% 1일 VaR</span><strong data-metric="var_95_1d_pct">—</strong><small>historical tail</small></article>
+        <article class="metric-cell metric-cell--risk"><span>95% Expected Shortfall</span><strong data-metric="expected_shortfall_95_1d_pct">—</strong><small>tail average</small></article>
+      </div>
+
+      <div class="contour-grid">
+        <figure class="chart-panel" aria-labelledby="cumulative-title">
+          <figcaption class="chart-heading"><div><p class="panel-kicker">PORTFOLIO CONTOUR / 01</p><h3 id="cumulative-title">누적 경로</h3></div><span class="chart-observation" id="cumulative-observations">— observations</span></figcaption>
+          <div class="chart-surface" id="cumulative-chart"><div class="chart-empty"><span aria-hidden="true">／</span><strong>누적 시계열 대기 중</strong><small>API가 반환한 배열로만 선을 그립니다.</small></div></div>
+          <div class="chart-table-alt" id="cumulative-table-alt"></div>
+        </figure>
+        <figure class="chart-panel chart-panel--drawdown" aria-labelledby="drawdown-title">
+          <figcaption class="chart-heading"><div><p class="panel-kicker">DRAWDOWN CONTOUR / 02</p><h3 id="drawdown-title">낙폭 경로</h3></div><span class="chart-observation" id="drawdown-observations">— observations</span></figcaption>
+          <div class="chart-surface" id="drawdown-chart"><div class="chart-empty"><span aria-hidden="true">⌁</span><strong>낙폭 시계열 대기 중</strong><small>결측값을 0으로 대체하지 않습니다.</small></div></div>
+          <div class="chart-table-alt" id="drawdown-table-alt"></div>
+        </figure>
+      </div>
+
+      <div class="analysis-grid">
+        <section class="risk-panel" aria-labelledby="risk-contribution-title">
+          <div class="chart-heading"><div><p class="panel-kicker">RISK CONTRIBUTION</p><h3 id="risk-contribution-title">무엇이 위험을 들고 있나</h3></div><span class="chart-hint">returned values</span></div>
+          <div class="risk-bars" id="risk-bars" aria-label="포지션별 위험기여 막대"><div class="section-empty">분석 후 위험기여가 표시됩니다.</div></div>
+          <div class="risk-table-wrap">
+            <table class="risk-table" id="risk-table">
+              <caption class="sr-only">포지션별 비중, 베타, 위험기여</caption>
+              <thead><tr><th scope="col">종목</th><th scope="col">비중</th><th scope="col">β</th><th scope="col">위험기여</th><th scope="col">상태</th></tr></thead>
+              <tbody><tr><td colspan="5" class="table-empty">반환 데이터 없음</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="correlation-panel" aria-labelledby="correlation-title">
+          <div class="chart-heading"><div><p class="panel-kicker">CORRELATION FIELD</p><h3 id="correlation-title">상관 행렬</h3></div><span class="chart-hint">−1.0 … +1.0</span></div>
+          <p class="matrix-scroll-help" id="matrix-scroll-help">종목 수가 많으면 이 라벨이 붙은 행렬 영역만 가로로 스크롤할 수 있습니다.</p>
+          <div class="correlation-scroll" id="correlation-scroll" tabindex="0" role="region" aria-label="포지션 상관 행렬. 가로 스크롤 가능"><div class="section-empty">분석 후 상관 행렬이 표시됩니다.</div></div>
+        </section>
+      </div>
+
+      <section class="metadata-panel" id="method" aria-labelledby="metadata-title">
+        <div class="metadata-panel__heading"><div><p class="panel-kicker">PROVENANCE / METHOD</p><h3 id="metadata-title">출처·기준일·산식 메타데이터</h3></div><div class="metadata-heading__right"><span class="panel-stamp" id="engine-mode">open_source_local</span><div class="contract-stamps" aria-label="화면 계약 버전"><code>gs-lab-api-v1</code><code>gs-risk-metric-contract-v1</code><code>source-disclosure-v1</code></div></div></div>
+        <div class="metadata-grid">
+          <dl><dt>데이터 출처</dt><dd id="metadata-source">분석 실행 후 응답에 표시됩니다.</dd></dl>
+          <dl><dt>기준일 / 조회 시각</dt><dd id="metadata-as-of">—</dd></dl>
+          <dl><dt>엔진</dt><dd id="metadata-engine">—</dd></dl>
+          <dl><dt>기관 API 상태</dt><dd id="metadata-marquee">Marquee institutional API 연결 없음</dd></dl>
+        </div>
+        <div class="formula-strip">
+          <div><span>누적</span><code>returned cumulative series</code></div>
+          <div><span>낙폭</span><code>indexed level / running peak − 1</code></div>
+          <div><span>시나리오</span><code>Δ ≈ weight × β × SPY shock</code></div>
+          <div><span>리스크 주의</span><code>correlation / β can change</code></div>
+        </div>
+        <p class="metadata-warnings" id="metadata-warnings">응답의 source, as-of, formula 필드를 확인하고 결측·부분 성공 여부를 함께 읽으세요.</p>
+      </section>
+    </section>
+  </main>
+
+  <footer class="lab-footer">
+    <div><strong>GS QUANT RISK LAB</strong><span>개인 연구용 · 주문 실행 없음</span></div>
+    <p>표시값은 데이터 공급자·계산 모델·응답 시점의 영향을 받습니다. 최신 공시와 개인 상황을 별도로 확인하세요.</p>
+    <a href="/#portfolio">S&amp;P 500 퀀트 시그널로 돌아가기 <span aria-hidden="true">↗</span></a>
+  </footer>
+</body>
+</html>

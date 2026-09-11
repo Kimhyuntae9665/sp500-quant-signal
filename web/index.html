@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f7f5ef">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="퀀트 시그널">
+  <meta name="description" content="S&P 500 종목의 가격 위치, 밸류에이션, 성장, 현금흐름을 같은 규칙으로 평가하는 퀀트 시그널 보드">
+  <title>S&amp;P 500 퀀트 시그널</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="192x192" href="./assets/app-icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css?v=24">
+  <script src="./app.js?v=24" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">본문으로 바로가기</a>
+
+  <header class="app-header" id="app-header">
+    <div class="header-inner">
+      <a class="brand" href="#board" data-nav="board" aria-label="S&P 500 퀀트 시그널 홈">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" focusable="false">
+            <path d="M7 22.5V17m6 5.5v-10m6 10V8m6 14.5V14"></path>
+            <circle cx="7" cy="14" r="2"></circle>
+            <circle cx="13" cy="9.5" r="2"></circle>
+            <circle cx="19" cy="5" r="2"></circle>
+            <circle cx="25" cy="11" r="2"></circle>
+          </svg>
+        </span>
+        <span class="brand-copy">
+          <strong>S&amp;P 500</strong>
+          <span>퀀트 시그널</span>
+        </span>
+      </a>
+
+      <nav class="primary-nav" aria-label="주요 메뉴">
+        <button class="nav-item is-active" type="button" data-view="board" aria-current="page">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 3.5h5v5h-5zm8 0h5v5h-5zm-8 8h5v5h-5zm8 0h5v5h-5z"></path></svg>
+          <span>시그널 보드</span>
+        </button>
+        <button class="nav-item" type="button" data-view="sectors">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4.5h6v4H3zm8 0h6v4h-6zM3 11.5h6v4H3zm8 0h6v4h-6z"></path></svg>
+          <span>섹터 탐색</span>
+        </button>
+        <button class="nav-item" type="button" data-view="portfolio">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8a7.2 7.2 0 1 0 7.2 7.2"></path><path d="M10 2.8v7.2h7.2"></path><path d="M10 6.1a3.9 3.9 0 1 1-3.9 3.9"></path></svg>
+          <span>내 포트</span>
+        </button>
+        <a class="nav-item nav-lab-link" href="./gs-lab.html" aria-label="GS Quant 리스크 랩 열기">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 15.5 7.2 11l3.1 2.4L17 5.5"></path><path d="M13.2 5.5H17v3.8"></path></svg>
+          <span>리스크 랩</span>
+          <small>LAB</small>
+        </a>
+        <button class="nav-item" type="button" data-view="detail">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="4.5"></circle><path d="m12 12 4 4"></path></svg>
+          <span>종목 상세</span>
+        </button>
+        <button class="nav-item" type="button" data-view="rules">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h12"></path><circle cx="8" cy="5" r="1.5"></circle><circle cx="13" cy="10" r="1.5"></circle><circle cx="7" cy="15" r="1.5"></circle></svg>
+          <span>점수 규칙</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <div class="data-stamp" id="data-stamp" title="마지막 데이터 기준 시각">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="as-of-header">데이터 확인 중</span>
+        </div>
+        <a class="icon-button gs-lab-mobile-launch" href="./gs-lab.html" aria-label="GS Quant 리스크 랩 열기">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 15.5 7.2 11l3.1 2.4L17 5.5"></path><path d="M13.2 5.5H17v3.8"></path></svg>
+        </a>
+        <button class="icon-button" id="help-button" type="button" aria-label="서비스 안내 보기" aria-haspopup="dialog">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"></circle><path d="M7.8 7.5a2.3 2.3 0 0 1 4.5.7c0 1.8-2.3 2-2.3 3.5M10 14.5h.01"></path></svg>
+        </button>
+        <button class="icon-button native-settings-button" type="button" data-native-settings aria-label="앱 연결 설정 열기" hidden>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6"></circle><path d="M10 2.8v2M10 15.2v2M17.2 10h-2M4.8 10h-2M15.1 4.9l-1.4 1.4M6.3 13.7l-1.4 1.4M15.1 15.1l-1.4-1.4M6.3 6.3 4.9 4.9"></path></svg>
+        </button>
+        <label class="refresh-mode-control" for="refresh-mode">
+          <span class="sr-only">데이터 갱신 범위</span>
+          <select id="refresh-mode" aria-describedby="refresh-duration">
+            <option value="full" selected>전체 갱신 · 재무 포함</option>
+            <option value="quick">빠른 갱신 · 가격만</option>
+          </select>
+          <small id="refresh-duration">수 분 이상 · 최초 실행 권장</small>
+        </label>
+        <button class="refresh-button" id="refresh-button" type="button">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 5v4h-4"></path><path d="M15.2 9A5.6 5.6 0 1 0 15 13"></path></svg>
+          <span>갱신 실행</span>
+        </button>
+      </div>
+    </div>
+    <div class="refresh-track" id="refresh-track" hidden aria-hidden="true"><span id="refresh-progress"></span></div>
+  </header>
+
+  <div class="environment-banner" id="environment-banner" hidden role="status">
+    <div>
+      <span class="banner-label">DEMO</span>
+      <strong>API 연결 전 미리보기 데이터</strong>
+      <span>실제 투자 판단에 사용하지 마세요.</span>
+    </div>
+    <button type="button" id="retry-api-button">API 다시 연결</button>
+  </div>
+
+  <div class="global-alert" id="global-alert" hidden role="alert">
+    <span class="alert-icon" aria-hidden="true">!</span>
+    <div>
+      <strong id="global-alert-title">데이터를 불러오지 못했습니다.</strong>
+      <p id="global-alert-message"></p>
+    </div>
+    <button class="text-button" id="dismiss-alert" type="button">닫기</button>
+  </div>
+
+  <main id="main-content" tabindex="-1">
+    <section class="view is-active" id="view-board" data-view-panel="board" aria-labelledby="board-title">
+      <div class="hero-shell">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span><span id="universe-label">S&amp;P 500 · 전체 종목</span></p>
+          <h1 id="board-title">오늘의 매수 매력도를<br><span>숫자로 선명하게.</span></h1>
+          <p class="hero-description">가격 위치, 밸류에이션, 이익 성장과 현금흐름을 같은 규칙으로 계산합니다. 느낌보다 기준이 먼저인 투자 판단을 시작하세요.</p>
+          <div class="hero-meta">
+            <span id="as-of-hero">최신 데이터 확인 중</span>
+            <span aria-hidden="true">·</span>
+            <button class="inline-info" type="button" data-view-jump="rules">점수 계산 방식 보기 <span aria-hidden="true">→</span></button>
+            <a class="inline-info hero-lab-link" href="./gs-lab.html">포트 위험 분석 <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="mobile-refresh-card" aria-label="모바일 데이터 갱신">
+            <div class="mobile-refresh-copy">
+              <span>DATA UPDATE</span>
+              <strong>최신 숫자로 다시 계산</strong>
+            </div>
+            <label for="mobile-refresh-mode">
+              <span class="sr-only">모바일 데이터 갱신 범위</span>
+              <select id="mobile-refresh-mode">
+                <option value="quick" selected>빠른 갱신</option>
+                <option value="full">전체 갱신</option>
+              </select>
+            </label>
+            <button class="mobile-refresh-button" id="mobile-refresh-button" type="button" aria-label="선택한 범위로 데이터 갱신">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 5v4h-4"></path><path d="M15.2 9A5.6 5.6 0 1 0 15 13"></path></svg>
+              <span>갱신</span>
+            </button>
+          </div>
+        </div>
+        <div class="hero-orbit" aria-hidden="true">
+          <span class="orbit-ring orbit-ring-one"></span>
+          <span class="orbit-ring orbit-ring-two"></span>
+          <span class="orbit-dot orbit-dot-one"></span>
+          <span class="orbit-dot orbit-dot-two"></span>
+          <div class="hero-score-token">
+            <span>BUY</span>
+            <strong>+10</strong>
+            <small>규칙 기반</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="board-content">
+        <section class="overview-section" aria-labelledby="overview-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="section-kicker">MARKET SNAPSHOT</p>
+              <h2 id="overview-title">오늘의 판단</h2>
+            </div>
+            <p>종목별 총점 분포와 공통 시장 점수</p>
+          </div>
+
+          <div class="summary-grid" id="summary-grid" aria-live="polite">
+            <div class="summary-card skeleton-block"></div>
+            <div class="summary-card skeleton-block"></div>
+            <div class="summary-card skeleton-block"></div>
+            <div class="summary-card skeleton-block"></div>
+            <div class="summary-card skeleton-block"></div>
+            <div class="summary-card skeleton-block"></div>
+          </div>
+
+          <dl class="coverage-strip" id="coverage-strip" aria-label="데이터 커버리지와 출처">
+            <div><dt>유효 데이터</dt><dd id="coverage-value">확인 중</dd></div>
+            <div><dt>가격 원천</dt><dd id="price-source-value">—</dd></div>
+            <div><dt>재무 원천</dt><dd id="fundamental-source-value">—</dd></div>
+            <div><dt>기준 시점</dt><dd id="coverage-as-of">—</dd></div>
+          </dl>
+
+          <div class="signal-panels">
+            <article class="panel recommendation-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-label">TOP SIGNALS</span>
+                  <h3>지금 눈에 띄는 종목</h3>
+                </div>
+                <button class="quiet-button" type="button" id="show-strong-buy">강한 매수만 보기</button>
+              </div>
+              <div class="ticker-pills" id="recommended-tickers" aria-live="polite">
+                <span class="ticker-pill skeleton-block"></span>
+                <span class="ticker-pill skeleton-block"></span>
+                <span class="ticker-pill skeleton-block"></span>
+              </div>
+              <p class="panel-footnote">종목을 선택하면 점수 근거와 데이터 출처를 확인할 수 있습니다.</p>
+            </article>
+
+            <article class="panel market-panel" id="market-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-label">MARKET TIMING</span>
+                  <h3>시장 환경 점수</h3>
+                </div>
+                <span class="market-verdict is-neutral" id="market-verdict">확인 중</span>
+              </div>
+              <div class="market-metrics" id="market-metrics">
+                <div class="metric-line skeleton-block"></div>
+                <div class="metric-line skeleton-block"></div>
+                <div class="metric-line skeleton-block"></div>
+              </div>
+              <div class="market-total">
+                <span>모든 종목에 공통 반영</span>
+                <strong id="market-total-score">—</strong>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="screener-section" id="screener" aria-labelledby="screener-title">
+          <div class="section-heading screener-heading">
+            <div>
+              <p class="section-kicker">RULE-BASED SCREENER</p>
+              <h2 id="screener-title">S&amp;P 500 시그널 보드</h2>
+              <p>총점이 같으면 고점 대비 하락 폭과 EPS 성장률 순으로 정렬합니다.</p>
+            </div>
+            <div class="result-count" aria-live="polite"><strong id="filtered-count">0</strong><span>개 종목</span></div>
+          </div>
+
+          <form class="filter-bar" id="filter-form" role="search">
+            <label class="search-control" for="stock-search">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="4.8"></circle><path d="m12.2 12.2 4 4"></path></svg>
+              <span class="sr-only">티커 또는 기업명 검색</span>
+              <input id="stock-search" name="search" type="search" autocomplete="off" placeholder="티커 또는 기업명 검색">
+              <kbd aria-hidden="true">/</kbd>
+            </label>
+            <label class="select-control" for="sector-filter">
+              <span>섹터</span>
+              <select id="sector-filter" name="sector"><option value="all">전체 섹터</option></select>
+            </label>
+            <label class="select-control" for="signal-filter">
+              <span>판단</span>
+              <select id="signal-filter" name="signal">
+                <option value="all">전체 판단</option>
+                <option value="strong-buy">강한 매수</option>
+                <option value="buy-watch">매수 대기</option>
+                <option value="neutral">관망</option>
+                <option value="sell-watch">매도 대기</option>
+                <option value="sell">매도</option>
+                <option value="insufficient">데이터 부족</option>
+              </select>
+            </label>
+            <label class="select-control sort-control" for="sort-select">
+              <span>정렬 기준</span>
+              <select id="sort-select" name="sort" aria-label="표 정렬 기준">
+                <option value="score-desc">총점 높은 순</option>
+                <option value="score-asc">총점 낮은 순</option>
+                <option value="drawdown-asc">고점 대비 하락 큰 순</option>
+                <option value="cash-quality-desc">현금흐름 품질 높은 순</option>
+                <option value="eps-desc">EPS 성장 높은 순</option>
+                <option value="ticker-asc">티커 A–Z</option>
+                <option value="ticker-desc">티커 Z–A</option>
+                <option value="sector-asc">섹터 A–Z</option>
+                <option value="sector-desc">섹터 Z–A</option>
+                <option value="judgement-asc">판단: 강한 매수부터</option>
+                <option value="judgement-desc">판단: 데이터 부족부터</option>
+                <option value="drawdown-desc">고점 대비 하락 작은 순</option>
+                <option value="price-desc">현재 주가 높은 순</option>
+                <option value="price-asc">현재 주가 낮은 순</option>
+                <option value="forward-pe-asc">FWD PER 낮은 순</option>
+                <option value="forward-pe-desc">FWD PER 높은 순</option>
+                <option value="pe-gap-asc">3Y PER 괴리 낮은 순</option>
+                <option value="pe-gap-desc">3Y PER 괴리 높은 순</option>
+                <option value="distance-200dma-asc">200일선 이격 낮은 순</option>
+                <option value="distance-200dma-desc">200일선 이격 높은 순</option>
+                <option value="eps-asc">EPS 성장 낮은 순</option>
+                <option value="rsi-desc">RSI 높은 순</option>
+                <option value="rsi-asc">RSI 낮은 순</option>
+                <option value="cash-quality-asc">현금흐름 품질 낮은 순</option>
+                <option value="debt-asc">부채비율 낮은 순</option>
+                <option value="debt-desc">부채비율 높은 순</option>
+                <option value="shareholder-return-desc">3Y 주주환원 높은 순</option>
+                <option value="shareholder-return-asc">3Y 주주환원 낮은 순</option>
+                <option value="shares-change-desc">3Y 주식수 증감률 높은 순</option>
+                <option value="shares-change-asc">3Y 주식수 증감률 낮은 순</option>
+              </select>
+            </label>
+            <button class="reset-button" id="reset-filters" type="button" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M7 6V4h6v2m-7 0 .7 10h6.6L14 6M8.5 9v4M11.5 9v4"></path></svg>
+              초기화
+            </button>
+          </form>
+
+          <div class="active-filter-row" id="active-filter-row" hidden aria-live="polite"></div>
+
+          <div class="table-shell" id="table-shell" aria-busy="true">
+            <div class="table-scroll" tabindex="0" aria-label="종목 시그널 표, 가로로 스크롤 가능">
+              <table class="signal-table">
+                <caption>S&amp;P 500 종목별 퀀트 시그널과 구성 점수</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="stock-column" aria-sort="none"><button class="column-sort" type="button" data-sort="ticker-asc" data-sort-key="ticker" data-default-direction="asc" aria-label="종목 기준 오름차순으로 정렬">종목 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="sector-asc" data-sort-key="sector" data-default-direction="asc" aria-label="섹터 기준 오름차순으로 정렬">섹터 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" class="judgement-column" aria-sort="none"><button class="column-sort" type="button" data-sort="judgement-asc" data-sort-key="judgement" data-default-direction="asc" aria-label="판단 기준 강한 매수부터 정렬">판단 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="drawdown-asc" data-sort-key="drawdown" data-default-direction="asc" aria-label="고점 대비 하락 기준 오름차순으로 정렬">고점 대비 하락 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="price-desc" data-sort-key="price" data-default-direction="desc" aria-label="현재 주가 기준 내림차순으로 정렬">현재 주가 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="forward-pe-asc" data-sort-key="forwardPE" data-default-direction="asc" aria-label="FWD PER 기준 오름차순으로 정렬">FWD PER <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="pe-gap-asc" data-sort-key="peGap" data-default-direction="asc" aria-label="3Y PER 괴리 기준 오름차순으로 정렬">3Y PER 괴리 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="distance-200dma-asc" data-sort-key="distance200" data-default-direction="asc" aria-label="200일선 이격 기준 오름차순으로 정렬">200일선 이격 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="eps-desc" data-sort-key="epsGrowth" data-default-direction="desc" aria-label="EPS 성장 기준 내림차순으로 정렬">EPS 성장 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="rsi-desc" data-sort-key="rsi" data-default-direction="desc" aria-label="RSI 기준 내림차순으로 정렬">RSI <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="cash-quality-desc" data-sort-key="cashFlowQuality" data-default-direction="desc" aria-label="현금흐름 품질 기준 내림차순으로 정렬">현금흐름 품질 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="debt-asc" data-sort-key="debt" data-default-direction="asc" aria-label="부채비율 기준 오름차순으로 정렬">부채비율 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="shareholder-return-desc" data-sort-key="shareholderReturn" data-default-direction="desc" aria-label="3Y 주주환원 기준 내림차순으로 정렬">3Y 주주환원 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" aria-sort="none"><button class="column-sort" type="button" data-sort="shares-change-desc" data-sort-key="sharesChange" data-default-direction="desc" aria-label="3Y 주식수 기준 내림차순으로 정렬">3Y 주식수 <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                    <th scope="col" class="details-column"><span class="sr-only">상세</span></th>
+                  </tr>
+                </thead>
+                <tbody id="stock-table-body"></tbody>
+              </table>
+            </div>
+
+            <div class="table-pagination" id="table-pagination" hidden aria-live="polite">
+              <span id="table-pagination-status">표시 중인 종목 수</span>
+              <button class="secondary-button" id="table-load-more" type="button">다음 종목 더 보기</button>
+            </div>
+
+            <div class="table-loading" id="table-loading" aria-live="polite">
+              <div class="loading-spinner" aria-hidden="true"></div>
+              <strong>전체 종목의 시그널을 정리하고 있어요</strong>
+              <span>가격과 펀더멘탈 데이터를 불러오는 중입니다.</span>
+            </div>
+
+            <div class="empty-state" id="empty-state" hidden>
+              <span class="empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><circle cx="14" cy="14" r="8"></circle><path d="m20 20 7 7M10.5 14h7"></path></svg>
+              </span>
+              <strong id="empty-title">조건에 맞는 종목이 없습니다</strong>
+              <p id="empty-message">검색어나 필터를 조금 넓혀보세요.</p>
+              <button class="secondary-button" type="button" id="empty-reset">필터 초기화</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="disclaimer" aria-label="투자 유의사항">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"></circle><path d="M10 8v5M10 5.5h.01"></path></svg>
+          <p><strong>기계적 연구 보조 점수이며 투자 조언이 아닙니다.</strong> 큰 낙폭은 ‘떨어지는 칼’, 낮은 밸류에이션은 ‘가치 함정’일 수 있습니다. 데이터 지연·누락과 기업 고유 위험을 확인하고 독립적으로 판단하세요.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view sectors-view" id="view-sectors" data-view-panel="sectors" aria-labelledby="sectors-page-title" hidden>
+      <div class="page-container sectors-container">
+        <div class="page-intro sectors-intro">
+          <div>
+            <p class="section-kicker">SECTOR &amp; THEME MAP</p>
+            <h1 id="sectors-page-title">업종별로 기회를 나눠 보기</h1>
+            <p>M7과 소프트웨어 테마, GICS 11개 섹터를 같은 점수 기준으로 비교합니다.</p>
+          </div>
+          <span class="readonly-badge"><span aria-hidden="true">●</span> 현재 S&amp;P 500 구성 기준</span>
+        </div>
+
+        <section class="theme-section" aria-labelledby="theme-groups-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="section-kicker">QUICK GROUPS</p>
+              <h2 id="theme-groups-title">즐겨 찾는 테마</h2>
+            </div>
+            <p>카드를 누르면 해당 종목만 보드에서 확인합니다.</p>
+          </div>
+          <div class="theme-card-grid" id="theme-card-grid" aria-live="polite"></div>
+        </section>
+
+        <section class="sector-map-section" aria-labelledby="sector-map-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="section-kicker">GICS SECTORS</p>
+              <h2 id="sector-map-title">11개 섹터 현황</h2>
+            </div>
+            <p>평균 점수와 상위 후보를 한눈에 비교합니다.</p>
+          </div>
+          <div class="sector-card-grid" id="sector-card-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="sector-method-note">
+          <strong>분류 기준</strong>
+          <p>섹터는 현재 S&amp;P 500 구성표의 GICS 값을 사용합니다. M7은 7개 기업이며 Alphabet의 두 상장 주식(GOOG·GOOGL)을 함께 표시합니다. 소프트웨어는 GICS 하위 산업명에 Software가 포함된 종목입니다.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view portfolio-view" id="view-portfolio" data-view-panel="portfolio" aria-labelledby="portfolio-page-title" hidden>
+      <div class="page-container portfolio-container">
+        <div class="page-intro portfolio-intro">
+          <div>
+            <p class="section-kicker">PORTFOLIO BUILDER</p>
+            <h1 id="portfolio-page-title">내 포트를 한눈에 구성하세요</h1>
+            <p>미국 상장 주식·ETF 전체, 코스피 상장 종목 전체, KRX 금과 현금을 한 화면에서 조합하고 시장별 비중을 비교합니다.</p>
+            <p class="portfolio-intro-note">보유 종목·수량·현금은 이 기기와 브라우저에 자동 저장되어 다음 방문에 복원·재계산됩니다. 다른 기기와 동기화하지 않습니다.</p>
+          </div>
+          <span class="portfolio-scope-badge"><span aria-hidden="true">●</span> 미국 · KOSPI · KRX 금 · 현금</span>
+        </div>
+
+        <div class="portfolio-layout">
+          <section class="portfolio-builder-card" aria-labelledby="portfolio-builder-title">
+            <div class="portfolio-card-heading">
+              <div>
+                <span class="portfolio-label">BUILD YOUR MIX</span>
+                <h2 id="portfolio-builder-title">세 단계로 담기</h2>
+              </div>
+              <span class="portfolio-step-count">03 STEPS</span>
+            </div>
+
+            <form id="portfolio-builder-form" class="portfolio-builder-form">
+              <fieldset class="portfolio-step">
+                <legend>
+                  <span class="portfolio-step-number">01</span>
+                  <span><strong>시장 선택</strong><small>찾을 자산의 시장을 고르세요.</small></span>
+                </legend>
+                <div class="portfolio-market-tabs" id="portfolio-market-tabs" role="tablist" aria-label="포트폴리오 시장 선택">
+                  <button class="portfolio-market-tab is-active" type="button" role="tab" aria-selected="true" data-portfolio-market="us">
+                    <span class="portfolio-market-swatch portfolio-market-swatch-us" aria-hidden="true"></span>
+                    <span><strong>미국</strong><small>US</small></span>
+                  </button>
+                  <button class="portfolio-market-tab" type="button" role="tab" aria-selected="false" data-portfolio-market="kospi">
+                    <span class="portfolio-market-swatch portfolio-market-swatch-korea" aria-hidden="true"></span>
+                    <span><strong>한국</strong><small>KOSPI</small></span>
+                  </button>
+                  <button class="portfolio-market-tab" type="button" role="tab" aria-selected="false" data-portfolio-market="gold">
+                    <span class="portfolio-market-swatch portfolio-market-swatch-gold" aria-hidden="true"></span>
+                    <span><strong>금</strong><small>KRX GOLD</small></span>
+                  </button>
+                </div>
+              </fieldset>
+
+              <fieldset class="portfolio-step">
+                <legend>
+                  <span class="portfolio-step-number">02</span>
+                  <span><strong>종목 검색</strong><small>티커나 이름으로 자산을 찾으세요.</small></span>
+                </legend>
+                <div class="portfolio-search-shell">
+                  <label class="portfolio-search-control" for="portfolio-search">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="4.8"></circle><path d="m12.2 12.2 4 4"></path></svg>
+                    <span class="sr-only">포트폴리오 종목 또는 금 검색</span>
+                    <input id="portfolio-search" name="portfolio-search" type="search" autocomplete="off" placeholder="예: AAPL, 삼성전자, 금" aria-controls="portfolio-search-results" aria-autocomplete="list">
+                  </label>
+                  <div id="portfolio-search-results" class="portfolio-search-results" role="listbox" aria-live="polite" aria-label="포트폴리오 검색 결과">
+                    <div class="portfolio-search-empty" role="option" aria-disabled="true" data-portfolio-search-empty>검색 결과가 여기에 표시됩니다.</div>
+                  </div>
+                </div>
+                <p class="portfolio-help-text">검색 결과를 눌러 보유 목록에 추가한 뒤 수량을 입력하세요.</p>
+              </fieldset>
+
+              <fieldset class="portfolio-step portfolio-holdings-step">
+                <legend>
+                  <span class="portfolio-step-number">03</span>
+                    <span><strong>수량·현금 입력 및 구성</strong><small>담은 자산의 수량과 현금을 확인하세요.</small></span>
+                </legend>
+                <div id="portfolio-holdings" class="portfolio-holdings" role="list" aria-live="polite" aria-label="선택한 포트폴리오 보유 목록">
+                  <div class="portfolio-empty-state" data-portfolio-empty>
+                    <span class="portfolio-empty-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="10" cy="10" r="5"></circle><path d="M14 14l7 7M18 10h9M23.5 5.5v9"></path></svg></span>
+                    <strong>아직 담은 자산이 없습니다</strong>
+                    <p>위 검색 결과에서 종목을 추가하면 수량 입력란이 나타납니다.</p>
+                  </div>
+                </div>
+                <div class="portfolio-cash-section" role="group" aria-labelledby="portfolio-cash-title">
+                  <div class="portfolio-cash-heading">
+                    <div class="portfolio-cash-title-group">
+                      <span class="portfolio-cash-swatch portfolio-legend-dot-cash" aria-hidden="true"></span>
+                      <div>
+                        <h3 id="portfolio-cash-title">현금</h3>
+                        <p>포트폴리오에 남겨 둔 현금도 함께 계산합니다.</p>
+                      </div>
+                    </div>
+                    <span class="portfolio-cash-badge">회색 현금</span>
+                  </div>
+                  <div class="portfolio-cash-input-row">
+                    <label class="portfolio-cash-field" for="portfolio-cash-amount">
+                      <span>현금 금액 <small>(만원)</small></span>
+                      <span class="portfolio-cash-input-wrap">
+                        <input id="portfolio-cash-amount" name="portfolio-cash-amount" type="number" min="0" step="1" inputmode="decimal" autocomplete="off" aria-describedby="portfolio-cash-help">
+                        <span aria-hidden="true">만원</span>
+                      </span>
+                    </label>
+                    <button class="secondary-button portfolio-cash-clear" id="portfolio-cash-clear" type="button">현금 지우기</button>
+                  </div>
+                  <p class="portfolio-cash-help" id="portfolio-cash-help">현금 금액은 이 기기와 브라우저에 자동 저장되며, 구성 결과에 회색 현금 슬라이스로 포함됩니다.</p>
+                </div>
+                <div class="portfolio-actions">
+                  <button class="primary-button portfolio-compose-button" id="portfolio-compose" type="submit">포트 구성하기</button>
+                  <button class="secondary-button portfolio-reset-button" id="portfolio-reset" type="button">초기화</button>
+                </div>
+                <p class="portfolio-status" id="portfolio-status" role="status" aria-live="polite">보유 종목·수량·현금은 이 기기와 브라우저에 자동 저장됩니다. 자산을 추가하면 포트를 구성할 수 있습니다.</p>
+              </fieldset>
+            </form>
+
+            <p class="portfolio-builder-footnote">수량은 주식·ETF는 주 단위, KRX 금은 g 단위로 입력합니다. 보유 종목·수량·현금은 이 기기와 브라우저에 자동 저장되고 다음 방문에 복원됩니다. 기기 간 동기화는 제공하지 않습니다.</p>
+          </section>
+
+          <section class="portfolio-result-card" aria-labelledby="portfolio-result-title">
+            <div class="portfolio-card-heading portfolio-result-heading">
+              <div>
+                <span class="portfolio-label">PORTFOLIO SNAPSHOT</span>
+                <h2 id="portfolio-result-title">구성 결과</h2>
+              </div>
+              <div class="portfolio-total-wrap">
+                <span>총 평가액</span>
+                <strong id="portfolio-total">—</strong>
+                <small>KRW</small>
+              </div>
+            </div>
+
+            <div class="portfolio-result-intro" role="status" aria-live="polite">
+              <span class="portfolio-result-intro-icon" aria-hidden="true">◎</span>
+              <p>현재 가격은 원화(KRW)로 환산됩니다. 보유 종목·수량·현금은 이 기기와 브라우저에 자동 저장되어 다음 방문에 복원됩니다. 포트를 구성하면 시장별 비중과 차트가 이곳에 나타납니다.</p>
+            </div>
+
+            <div class="portfolio-group-summary" id="portfolio-group-summary" aria-live="polite">
+              <span class="portfolio-summary-placeholder">시장별 요약은 포트를 구성한 뒤 표시됩니다.</span>
+            </div>
+
+            <div class="portfolio-chart-grid">
+              <article class="portfolio-chart-panel portfolio-donut-panel" aria-labelledby="portfolio-donut-title">
+                <div class="portfolio-chart-heading">
+                  <div>
+                    <span class="portfolio-chart-kicker">ALLOCATION</span>
+                    <h3 id="portfolio-donut-title">보유 비중</h3>
+                  </div>
+                  <span class="portfolio-chart-hint">주요 비중은 안쪽에 표시</span>
+                </div>
+                <div id="portfolio-donut" class="portfolio-chart-box portfolio-donut" role="img" aria-label="포트폴리오 보유 비중 도넛 차트">
+                  <div class="portfolio-chart-empty"><span aria-hidden="true">◌</span><strong>도넛 차트 대기 중</strong><small>포트 구성 후 비중을 표시합니다.</small></div>
+                </div>
+              </article>
+
+              <article class="portfolio-chart-panel portfolio-treemap-panel" aria-labelledby="portfolio-treemap-title">
+                <div class="portfolio-chart-heading">
+                  <div>
+                    <span class="portfolio-chart-kicker">GROUPED VALUE MAP</span>
+                    <h3 id="portfolio-treemap-title">시장별 자산 지도</h3>
+                  </div>
+                  <span class="portfolio-chart-hint">면적 = 평가액</span>
+                </div>
+                <div id="portfolio-treemap" class="portfolio-chart-box portfolio-treemap" role="img" aria-label="시장별 그룹 트리맵">
+                  <div class="portfolio-chart-empty"><span aria-hidden="true">▦</span><strong>트리맵 대기 중</strong><small>시장별 그룹과 종목 면적을 표시합니다.</small></div>
+                </div>
+              </article>
+            </div>
+
+            <div class="portfolio-unpriced" id="portfolio-unpriced" role="status" aria-live="polite" hidden></div>
+            <p class="portfolio-source-note" id="portfolio-source-note">미국/KOSPI 편의 시세는 지연될 수 있습니다. KRX 금은 네이버 국내 금 시세(원/g)를 사용합니다. 표시 값은 정보 제공용이며 투자 조언이 아닙니다.</p>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="view detail-view" id="view-detail" data-view-panel="detail" aria-labelledby="detail-page-title" hidden>
+      <div class="page-container">
+        <div class="page-intro">
+          <div>
+            <p class="section-kicker">STOCK EXPLORER</p>
+            <h1 id="detail-page-title">종목 하나를 깊게 보기</h1>
+            <p>총점만 보지 말고, 어떤 숫자가 판단을 만들었는지 확인하세요.</p>
+          </div>
+          <label class="detail-picker" for="detail-stock-select">
+            <span>종목 선택</span>
+            <select id="detail-stock-select"><option value="">종목을 선택하세요</option></select>
+          </label>
+        </div>
+        <div id="detail-page-content" class="detail-page-content">
+          <div class="blank-detail">
+            <span class="blank-detail-icon" aria-hidden="true">
+              <svg viewBox="0 0 40 40"><path d="M7 31V20m9 11V13m9 18V7m9 24V17"></path><circle cx="7" cy="16" r="2"></circle><circle cx="16" cy="9" r="2"></circle><circle cx="25" cy="4" r="2"></circle><circle cx="34" cy="13" r="2"></circle></svg>
+            </span>
+            <strong>분석할 종목을 선택하세요</strong>
+            <p>시그널 보드의 행을 선택하거나 위 목록에서 티커를 찾을 수 있습니다.</p>
+            <button class="secondary-button" type="button" data-view-jump="board">시그널 보드로 이동</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view rules-view" id="view-rules" data-view-panel="rules" aria-labelledby="rules-page-title" hidden>
+      <div class="page-container rules-container">
+        <div class="page-intro rules-intro">
+          <div>
+            <p class="section-kicker">SCORING PLAYBOOK</p>
+            <h1 id="rules-page-title">점수가 만들어지는 방식</h1>
+            <p>누구나 같은 데이터로 같은 결론을 재현할 수 있도록 규칙과 예외를 공개합니다.</p>
+          </div>
+          <span class="readonly-badge"><span aria-hidden="true">●</span> 서버 규칙 · 읽기 전용</span>
+        </div>
+
+        <div class="formula-banner">
+          <div>
+            <span class="formula-label">최종 종목 점수</span>
+            <strong>가격 위치 + 밸류에이션 + 성장 + 현금흐름 + 주주환원 + 재무 안전성 + 시장 환경</strong>
+          </div>
+          <span class="formula-equals" aria-hidden="true">=</span>
+          <div class="formula-result">
+            <span>판단 구간</span>
+            <strong>강한 매수 ↔ 매도</strong>
+          </div>
+        </div>
+
+        <section aria-labelledby="rule-list-title">
+          <div class="section-heading compact rule-heading">
+            <div>
+              <p class="section-kicker">STOCK METRICS</p>
+              <h2 id="rule-list-title">종목별 점수 규칙</h2>
+            </div>
+            <p id="rules-updated">규칙 불러오는 중</p>
+          </div>
+          <div class="rules-grid" id="rules-grid" aria-live="polite">
+            <article class="rule-card skeleton-block"></article>
+            <article class="rule-card skeleton-block"></article>
+            <article class="rule-card skeleton-block"></article>
+          </div>
+          <div class="rules-error" id="rules-error" hidden role="alert">
+            <strong>점수 규칙을 불러오지 못했습니다.</strong>
+            <button class="text-button" type="button" id="retry-rules">다시 시도</button>
+          </div>
+        </section>
+
+        <section class="settings-section" aria-labelledby="settings-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="section-kicker">CALCULATION POLICY</p>
+              <h2 id="settings-title">계산 정책</h2>
+            </div>
+            <p>현재 서버에 적용된 기본 정책</p>
+          </div>
+          <dl class="policy-list">
+            <div><dt>결측값 처리</dt><dd><strong>N/A</strong><span>0점으로 치환하지 않고 커버리지에서 제외 · 회사 지표 4개 미만은 추천 제외</span></dd></div>
+            <div><dt>EPS 성장 기준</dt><dd><strong>최근 1년</strong><span>동일한 기간의 희석 EPS 또는 서버 제공 성장률 사용</span></dd></div>
+            <div><dt>주주환원 기준</dt><dd><strong>최근 3년</strong><span>평균 배당수익률 + 양(+)의 평균 순주식수 감소율 프록시 · 희석은 별도 감점</span></dd></div>
+            <div><dt>시장 점수 반영</dt><dd><strong>전 종목 공통</strong><span>SPY·VIX·Fear &amp; Greed 조건을 각 종목 총점에 동일 반영</span></dd></div>
+            <div><dt>동점 정렬</dt><dd><strong>낙폭 → EPS</strong><span>고점 대비 하락 폭이 큰 종목, EPS 성장이 높은 종목 순</span></dd></div>
+          </dl>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <nav class="mobile-bottom-nav" aria-label="모바일 주요 메뉴">
+    <button class="mobile-nav-item is-active" type="button" data-view="board" aria-current="page">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 3.5h5v5h-5zm8 0h5v5h-5zm-8 8h5v5h-5zm8 0h5v5h-5z"></path></svg>
+      <span>시그널</span>
+    </button>
+    <button class="mobile-nav-item" type="button" data-view="sectors">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4.5h6v4H3zm8 0h6v4h-6zM3 11.5h6v4H3zm8 0h6v4h-6z"></path></svg>
+      <span>섹터</span>
+    </button>
+    <button class="mobile-nav-item" type="button" data-view="portfolio">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8a7.2 7.2 0 1 0 7.2 7.2"></path><path d="M10 2.8v7.2h7.2"></path><path d="M10 6.1a3.9 3.9 0 1 1-3.9 3.9"></path></svg>
+      <span>내 포트</span>
+    </button>
+    <button class="mobile-nav-item" type="button" data-view="detail">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="4.5"></circle><path d="m12 12 4 4"></path></svg>
+      <span>종목</span>
+    </button>
+    <button class="mobile-nav-item" type="button" data-view="rules">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h12"></path><circle cx="8" cy="5" r="1.5"></circle><circle cx="13" cy="10" r="1.5"></circle><circle cx="7" cy="15" r="1.5"></circle></svg>
+      <span>규칙</span>
+    </button>
+    <button class="mobile-nav-item native-mobile-settings" type="button" data-native-settings aria-label="앱 연결 설정" hidden>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6"></circle><path d="M10 2.8v2M10 15.2v2M17.2 10h-2M4.8 10h-2M15.1 4.9l-1.4 1.4M6.3 13.7l-1.4 1.4M15.1 15.1l-1.4-1.4M6.3 6.3 4.9 4.9"></path></svg>
+      <span>연결</span>
+    </button>
+  </nav>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="stock-drawer" id="stock-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-describedby="drawer-description" hidden>
+    <div class="drawer-header">
+      <div>
+        <span class="drawer-kicker">SIGNAL &amp; HISTORY</span>
+        <h2 id="drawer-title">종목 상세</h2>
+      </div>
+      <button class="icon-button drawer-close" id="drawer-close" type="button" aria-label="종목 상세 닫기">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"></path></svg>
+      </button>
+    </div>
+    <p class="sr-only" id="drawer-description">선택한 종목의 총점, 최대 5년 PER과 주요 추세 차트, 세부 산식과 데이터 출처를 확인합니다.</p>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+
+  <dialog class="help-dialog" id="help-dialog" aria-labelledby="help-title">
+    <form method="dialog">
+      <div class="dialog-header">
+        <span class="dialog-symbol" aria-hidden="true">?</span>
+        <button class="icon-button" value="cancel" aria-label="안내 닫기">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"></path></svg>
+        </button>
+      </div>
+      <h2 id="help-title">이 보드는 어떻게 읽나요?</h2>
+      <p>총점은 매수·매도의 정답이 아니라, 현재 숫자가 과거와 비교해 얼마나 매력적인지를 빠르게 살피는 출발점입니다.</p>
+      <ol>
+        <li><strong>판단 구간</strong><span>총점으로 후보군을 좁힙니다.</span></li>
+        <li><strong>세부 점수</strong><span>행의 숫자 옆 가점·감점을 확인합니다.</span></li>
+        <li><strong>근거와 출처</strong><span>종목 상세에서 데이터 기준일과 원천을 검토합니다.</span></li>
+      </ol>
+      <button class="primary-button" value="default">확인했습니다</button>
+      <button class="secondary-button install-app-button" id="install-app-button" type="button" hidden>홈 화면에 앱 설치</button>
+    </form>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

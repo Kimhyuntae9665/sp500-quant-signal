@@ -1,0 +1,7 @@
+# The HTTP server itself uses only Python's standard library; no FastAPI/Flask.
+# These packages are used by the default Yahoo convenience-data provider.
+yfinance>=1.3.0,<2
+pandas>=2.2.3,<4
+requests>=2.32.3,<3
+lxml>=6.1.1,<7
+gs-quant==2.1.6

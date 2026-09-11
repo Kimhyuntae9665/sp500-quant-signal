@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">S&amp;P 500 퀀트 시그널</title>
+  <desc id="desc">마스커블 영역 안의 퀀트 데이터 차트</desc>
+  <rect width="512" height="512" fill="#d5eee2"/>
+  <rect x="76" y="76" width="360" height="360" rx="88" fill="#fffdf8"/>
+  <g fill="none" stroke="#0d684d" stroke-linecap="round" stroke-linejoin="round" stroke-width="26">
+    <path d="M145 347V278M219 347V228M293 347V171M367 347V243"/>
+    <path d="m145 249 74-50 74-57 74 72"/>
+  </g>
+  <g fill="#168463" stroke="#fffdf8" stroke-width="12">
+    <circle cx="145" cy="249" r="23"/>
+    <circle cx="219" cy="199" r="23"/>
+    <circle cx="293" cy="142" r="23"/>
+    <circle cx="367" cy="214" r="23"/>
+  </g>
+</svg>

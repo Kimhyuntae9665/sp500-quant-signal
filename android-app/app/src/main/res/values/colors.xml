@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#F4F7F2</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_muted">#EEF4EF</color>
+    <color name="ink">#132820</color>
+    <color name="ink_muted">#64756D</color>
+    <color name="brand">#146B50</color>
+    <color name="brand_dark">#0C4A39</color>
+    <color name="brand_soft">#DFF2E9</color>
+    <color name="border">#D8E2DC</color>
+    <color name="danger">#A23C37</color>
+    <color name="icon_background">#146B50</color>
+</resources>
