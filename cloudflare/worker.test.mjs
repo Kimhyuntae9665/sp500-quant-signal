@@ -159,8 +159,60 @@ test("public quote subrequests are bounded for 50 missing holdings", async () =>
   let count = 0;
   globalThis.fetch = async () => { count++; return new Response("unavailable", { status: 503 }); };
   const { data } = await call("/api/portfolio/compose", { holdings: Array.from({ length: 50 }, (_, index) => holding(`X${index}`)), cash_krw: 1 });
-  assert.equal(count, 16);
+  assert.equal(count, 32);
   assert.equal(data.unpriced.length, 50);
+});
+test("Yahoo sends browser user agent, retries only query2, and exposes safe status diagnostics", async () => {
+  const hosts = [];
+  globalThis.fetch = async (url, options) => {
+    hosts.push(url.hostname);
+    assert.match(options.headers["User-Agent"], /^Mozilla\/5\.0/);
+    assert.equal(options.redirect, "error");
+    return url.hostname === "query1.finance.yahoo.com" ? new Response("private upstream details not forwarded", { status: 429 })
+      : new Response(JSON.stringify({ quotes: [{ symbol: "TLT", shortname: "Treasury ETF", exchange: "NGM", quoteType: "ETF" }] }));
+  };
+  const { data } = await call("/api/portfolio/search?market=us&q=TLT");
+  assert.deepEqual(hosts, ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]);
+  assert.equal(data.results[0].symbol, "TLT");
+  assert.deepEqual(data.upstream.attempts.map(item => item.status), [429, 200]);
+  assert.doesNotMatch(JSON.stringify(data), /private upstream details/);
+});
+test("snapshot ETF exact search and compose do not depend on blocked Yahoo", async () => {
+  globalThis.fetch = async () => { throw new Error("No Yahoo call expected"); };
+  const snapshot = { ...portfolio, catalog: [...portfolio.catalog, { symbol: "TLT", name: "Treasury ETF", market: "us", asset_type: "ETF" }], quotes: { ...portfolio.quotes, TLT: { price: 90, currency: "USD", as_of: stamp } } };
+  const environment = env({ "/data/portfolio.json": snapshot });
+  const result = await call("/api/portfolio/search?market=us&q=TLT", undefined, environment);
+  assert.equal(result.data.results[0].symbol, "TLT");
+  assert.equal(result.data.upstream, undefined);
+  const composed = await call("/api/portfolio/compose", { holdings: [holding("TLT")] }, environment);
+  assert.equal(composed.data.total_value_krw, 252000);
+});
+test("risk uses full daily adjusted snapshots before any Yahoo call", async () => {
+  globalThis.fetch = async () => { throw new Error("No Yahoo call expected"); };
+  const prices = Array.from({ length: 100 }, (_, index) => ({ date: new Date(Date.now() - (110 - index) * 86400000).toISOString().slice(0, 10), value: 100 + index }));
+  const snapshots = Object.fromEntries(["AAA", "BBB", "SPY"].map(symbol => [`/data/risk/${symbol}.json`, { symbol, frequency: "daily", adjusted: true, prices, as_of: prices.at(-1).date }]));
+  const result = await call("/api/gs-quant/analyze", { positions: [{ symbol: "AAA", weight_pct: 60 }, { symbol: "BBB", weight_pct: 40 }], benchmark: "SPY", lookback: "3y", risk_free_rate_pct: 4 }, env(snapshots));
+  assert.equal(result.response.status, 200);
+  assert.match(result.data.data.provider, /Scheduled/);
+  assert.equal(result.data.data.source_by_symbol.SPY.kind, "scheduled_daily_snapshot");
+  assert.equal(result.data.engine.gs_quant_runtime, false);
+});
+test("failed quote diagnostics contain fixed hosts and HTTP statuses, not response bodies", async () => {
+  globalThis.fetch = async () => new Response("SENSITIVE UPSTREAM DEBUG", { status: 429 });
+  const result = await call("/api/portfolio/compose", { holdings: [holding("TLT")] });
+  assert.equal(result.response.status, 502);
+  assert.deepEqual(result.data.error.details.quotes[0].upstream_diagnostics.map(item => item.status), [429, 429]);
+  assert.doesNotMatch(JSON.stringify(result.data), /SENSITIVE UPSTREAM DEBUG/);
+});
+test("risk missing-snapshot retries remain below fifty total subrequests", async () => {
+  let count = 0;
+  const environment = { DATA_BASE_URL: "https://kimhyuntae9665.github.io/sp500-quant-signal/data/", ASSETS: { fetch: async () => { count++; return new Response("missing", { status: 404 }); } } };
+  globalThis.fetch = async url => { count++; return new Response("unavailable", { status: url.hostname.endsWith("github.io") ? 404 : 429 }); };
+  const result = await call("/api/gs-quant/analyze", { positions: Array.from({ length: 12 }, (_, index) => ({ symbol: `X${index}`, weight_pct: 100 / 12 })), benchmark: "SPY", lookback: "3y", risk_free_rate_pct: 4 }, environment);
+  // Promise.all may surface an error while other already-started calls settle.
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.ok(count <= 48, `subrequests=${count}`);
+  assert.equal(result.response.status, 502);
 });
 test("domestic gold is read only from fixed Naver instrument with its source date", async () => {
   globalThis.fetch = async (url, options) => {

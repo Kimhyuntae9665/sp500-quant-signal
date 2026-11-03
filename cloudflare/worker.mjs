@@ -104,13 +104,27 @@ function quote(raw, currency) {
   if (!object(raw) || !positive(raw.price ?? raw.value) || raw.currency && raw.currency !== currency || typeof raw.as_of !== "string" || !Number.isFinite(Date.parse(raw.as_of))) return null;
   return { price: raw.price ?? raw.value, currency, as_of: raw.as_of, source: source(raw.source) };
 }
-async function yahoo(path, params) {
+async function yahoo(path, params, budget = { remaining: 2 }) {
   // Neither host nor endpoint is controlled by callers. Never follow redirects.
-  const url = new URL(path, "https://query1.finance.yahoo.com");
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-  const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(8000), headers: { Accept: "application/json" } });
-  if (!response.ok) throw new Error("Yahoo unavailable");
-  return response.json();
+  const attempts = [];
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+    if (budget.remaining <= 0) { attempts.push({ host, status: "request_budget_exhausted" }); break; }
+    budget.remaining--;
+    const url = new URL(path, `https://${host}`);
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    try {
+      const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(6000), headers: {
+        Accept: "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      } });
+      attempts.push({ host, status: response.status });
+      if (!response.ok) continue;
+      const result = await response.json();
+      if (!object(result)) continue;
+      Object.defineProperty(result, "cloudUpstream", { value: { host, attempts } });
+      return result;
+    } catch (error) { attempts.push({ host, status: error.name === "TimeoutError" || error.name === "AbortError" ? "timeout" : "network_or_invalid_json" }); }
+  }
+  throw new ApiError(502, "market_provider_unavailable", "외부 편의 시세 제공처에 연결할 수 없습니다.", { attempts });
 }
 async function liveQuote(symbol, currency) {
   const data = await yahoo(`/v8/finance/chart/${encodeURIComponent(symbol)}`, { range: "5d", interval: "1d", includePrePost: "false" });
@@ -126,7 +140,7 @@ async function liveQuote(symbol, currency) {
   if (!positive(price) || !positive(epoch) || !Number.isFinite(new Date(epoch * 1000).getTime())) return null;
   return { price, currency, as_of: new Date(epoch * 1000).toISOString(), source: {
     provider: "Yahoo Finance", source: "Yahoo Finance convenience API (unofficial)", official: false,
-    url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`,
+    url: `https://${data.cloudUpstream.host}/v8/finance/chart/${encodeURIComponent(symbol)}`,
     note: "요청 시 조회한 지연 가능 편의 시세입니다. 공식 거래소 API가 아닙니다.",
   } };
 }
@@ -156,13 +170,25 @@ async function liveGold() {
   }
   return null;
 }
-async function riskHistory(symbol, lookback) {
+async function riskHistory(symbol, lookback, request, env, diagnostics, sources, budget) {
   // Validation remains here as well as in risk.mjs: no arbitrary URL/interval.
   if (!SYMBOL.test(symbol) || symbol.includes("..") || !["1y", "3y", "5y"].includes(lookback)) throw new ApiError(400, "invalid_symbol", "허용되지 않은 위험 분석 종목 또는 기간입니다.");
-  const data = await yahoo(`/v8/finance/chart/${encodeURIComponent(symbol)}`, { range: lookback === "3y" ? "5y" : lookback, interval: "1d", includePrePost: "false" });
+  if (request) {
+    const snapshot = await asset(env, request, `/data/risk/${symbol}.json`, true);
+    const prices = snapshot.prices;
+    if (snapshot.frequency === "daily" && snapshot.adjusted === true && Array.isArray(prices) && prices.length >= 60) {
+      sources[symbol] = { kind: "scheduled_daily_snapshot", as_of: snapshot.as_of ?? prices.at(-1)?.date ?? null, source: snapshot.source ?? null, cloud_snapshot: snapshot.cloud_snapshot };
+      if (snapshot.cloud_snapshot?.bundled_fallback) diagnostics.push(`${symbol}: ${snapshot.cloud_snapshot.warning}`);
+      return prices;
+    }
+  }
+  let data;
+  try { data = await yahoo(`/v8/finance/chart/${encodeURIComponent(symbol)}`, { range: lookback === "3y" ? "5y" : lookback, interval: "1d", includePrePost: "false" }, budget); }
+  catch (error) { throw new ApiError(502, "history_unavailable", `${symbol}의 일별 수정 종가를 확인할 수 없습니다.`, { symbol, ...(error.details || {}) }); }
   const row = data?.chart?.result?.[0];
   const adjusted = row?.indicators?.adjclose?.[0]?.adjclose;
   if (!row || !Array.isArray(adjusted) || row.meta?.currency !== "USD") throw new ApiError(502, "history_unavailable", `${symbol}의 수정 종가를 확인할 수 없습니다.`);
+  if (sources) sources[symbol] = { kind: "yahoo_direct", upstream: data.cloudUpstream };
   return (row.timestamp || []).flatMap((timestamp, index) => positive(timestamp) && positive(adjusted[index]) ? [{ date: new Date(timestamp * 1000).toISOString().slice(0, 10), value: adjusted[index] }] : []);
 }
 function instrument(item, selectedMarket = item.market) {
@@ -186,6 +212,12 @@ async function search(request, env, url) {
     .slice(0, limit).map(item => instrument(item));
   if (selectedMarket === "gold") results = !q || [GOLD, "KRX 금 99.99_1kg", "gold"].some(text => text.toLowerCase().includes(q.toLowerCase()))
     ? [instrument({ symbol: GOLD, name: "KRX 금 99.99_1kg", market: "gold" })] : [];
+  // Exact catalog matches need no vendor call, including ETFs outside S&P 500.
+  if (results.some(item => item.symbol.toLowerCase() === q.toLowerCase())) {
+    results.sort((a, b) => Number(b.symbol.toLowerCase() === q.toLowerCase()) - Number(a.symbol.toLowerCase() === q.toLowerCase()));
+    return { query: q, market: selectedMarket, results, source: source(snapshot.source).source, cloud_snapshot: snapshot.cloud_snapshot ?? null,
+      warnings: [...warnings, "수집된 종목 목록에서 검색했습니다. 수집 범위 밖 종목이나 목록 기준일 이후의 신규 상장은 누락될 수 있습니다."] };
+  }
   if (["us", "kospi"].includes(selectedMarket)) {
     try {
       const data = await yahoo("/v1/finance/search", { q, quotesCount: Math.max(limit * 3, 20), newsCount: 0 });
@@ -196,11 +228,11 @@ async function search(request, env, url) {
         : SYMBOL.test(item.symbol || "") && !item.symbol.includes("..") && ["EQUITY", "ETF"].includes(item.quoteType) && exchanges.has(item.exchange));
       const merged = [...dynamic.map(item => instrument({ symbol: selectedMarket === "kospi" ? item.symbol.slice(0, 6) : item.symbol, name: item.longname || item.shortname || item.symbol, exchange: item.exchange, asset_type: item.quoteType }, selectedMarket)), ...results];
       results = merged.filter((item, index) => merged.findIndex(candidate => candidate.id === item.id) === index).slice(0, limit);
-      return { query: q, market: selectedMarket, results, cloud_snapshot: snapshot.cloud_snapshot ?? null, source: "Yahoo Finance convenience API (unofficial) + scheduled catalog", warnings: [...warnings, selectedMarket === "us" ? "검색 범위는 S&P 500에 한정되지 않은 미국 상장 주식·ETF입니다. 편의 API 장애·제공 범위에 따라 누락될 수 있습니다." : "KOSPI 스냅샷과 Yahoo의 .KS 검색을 사용합니다. 전체 상장 종목의 검색 완전성을 보장하지 않습니다."] };
-    } catch { warnings.push("검색 제공처에 연결하지 못해 수집 스냅샷 내 종목만 검색했습니다."); }
+      return { query: q, market: selectedMarket, results, cloud_snapshot: snapshot.cloud_snapshot ?? null, upstream: data.cloudUpstream, source: "Yahoo Finance convenience API (unofficial) + scheduled catalog", warnings: [...warnings, selectedMarket === "us" ? "검색 범위는 S&P 500에 한정되지 않은 미국 상장 주식·ETF입니다. 편의 API 장애·제공 범위에 따라 누락될 수 있습니다." : "KOSPI 스냅샷과 Yahoo의 .KS 검색을 사용합니다. 전체 상장 종목의 검색 완전성을 보장하지 않습니다."] };
+    } catch (error) { warnings.push("검색 제공처에 연결하지 못해 수집 스냅샷 내 종목만 검색했습니다."); snapshot.upstream_diagnostics = error.details?.attempts || []; }
   }
   if (selectedMarket === "kospi") warnings.push("KOSPI 검색은 마지막으로 수집된 종목 목록 기준입니다.");
-  return { query: q, market: selectedMarket, results, source: source(snapshot.source).source, cloud_snapshot: snapshot.cloud_snapshot ?? null, warnings };
+  return { query: q, market: selectedMarket, results, source: source(snapshot.source).source, cloud_snapshot: snapshot.cloud_snapshot ?? null, upstream_diagnostics: snapshot.upstream_diagnostics ?? [], warnings };
 }
 function validatePortfolio(payload) {
   const holdings = payload.holdings ?? [];
@@ -231,8 +263,9 @@ async function compose(request, env, payload) {
   const warnings = [SNAPSHOT_NOTE, ...(Array.isArray(snapshot.warnings) ? snapshot.warnings : [])];
   const needsFx = holdings.some(item => item.market === "us");
   let fx = needsFx ? quote(snapshot.usd_krw, "KRW") : null;
+  let fxDiagnostics = [];
   const fxPromise = !fx && needsFx
-    ? liveQuote("KRW=X", "KRW").then(value => { fx = value; }).catch(() => { /* Report missing conversion per holding. */ })
+    ? liveQuote("KRW=X", "KRW").then(value => { fx = value; }).catch(error => { fxDiagnostics = error.details?.attempts || []; })
     : Promise.resolve();
   let liveCount = 0;
   const priced = [], unpriced = [];
@@ -243,7 +276,7 @@ async function compose(request, env, payload) {
     if (!local && holding.market === "gold") { try { local = await liveGold(); } catch { /* Missing gold stays unpriced. */ } }
     if (!local && holding.market !== "gold" && liveCount < MAX_LIVE_QUOTES) {
       liveCount++;
-      try { local = await liveQuote(holding.market === "kospi" ? `${holding.symbol}.KS` : holding.symbol, currency); } catch { /* Never substitute a synthetic price. */ }
+      try { local = await liveQuote(holding.market === "kospi" ? `${holding.symbol}.KS` : holding.symbol, currency); } catch (error) { holding.upstream_diagnostics = error.details?.attempts || []; }
     }
     if (holding.market === "us") await fxPromise;
     const rate = holding.market === "us" ? fx?.price : 1;
@@ -266,7 +299,9 @@ async function compose(request, env, payload) {
       group_key: "cash", group_label: GROUPS.cash.label, color: GROUPS.cash.color, quote: { as_of: timestamp, source: meta },
       quote_as_of: timestamp, as_of: timestamp, source: meta });
   }
-  if (!priced.length) throw new ApiError(502, "portfolio_no_priced_holdings", "확인 가능한 시세가 없어 포트폴리오를 계산할 수 없습니다.");
+  if (!priced.length) throw new ApiError(502, "portfolio_no_priced_holdings", "확인 가능한 시세가 없어 포트폴리오를 계산할 수 없습니다.", {
+    quotes: unpriced.map(item => ({ symbol: item.symbol, error: item.error.code, upstream_diagnostics: item.upstream_diagnostics ?? [] })), fx_upstream_diagnostics: fxDiagnostics,
+  });
   const total = priced.reduce((sum, item) => sum + item.value_krw, 0);
   if (!positive(total)) throw new ApiError(400, "invalid_quantity", "계산 가능한 범위를 초과한 수량입니다.");
   for (const item of priced) item.weight_pct = Math.round(item.value_krw / total * 1e8) / 1e6;
@@ -278,7 +313,7 @@ async function compose(request, env, payload) {
   if (liveCount) warnings.push(`스냅샷에 없는 종목은 요청당 최대 ${MAX_LIVE_QUOTES}개까지 외부 편의 시세로 조회했습니다.`);
   return { generated_at: now(), snapshot_generated_at: snapshot.generated_at ?? null, cloud_snapshot: snapshot.cloud_snapshot ?? null, base_currency: "KRW", unit: "만원",
     total_value_krw: total, total_value_manwon: total / 10000,
-    fx: { pair: "USD/KRW", rate: fx?.price ?? null, usdkrw: fx?.price ?? null, as_of: fx?.as_of ?? null, source: fx?.source ?? null },
+    fx: { pair: "USD/KRW", rate: fx?.price ?? null, usdkrw: fx?.price ?? null, as_of: fx?.as_of ?? null, source: fx?.source ?? null, upstream_diagnostics: fxDiagnostics },
     groups, holdings: priced, priced, priced_holdings: priced, unpriced, errors: unpriced, warnings };
 }
 async function route(request, env) {
@@ -299,8 +334,24 @@ async function route(request, env) {
     }
     if (path === "/api/gs-quant/analyze") {
       const payload = await body(request, ["positions", "benchmark", "lookback", "risk_free_rate_pct"]);
-      try { return json(await analyzeRisk(payload, { prices: {} }, riskHistory)); }
-      catch (error) { if (error instanceof ApiError) throw error; throw new ApiError(Number.isInteger(error.status) && error.status >= 400 && error.status <= 599 ? error.status : 502, error.code || "risk_analysis_unavailable", error.message || "위험 분석 데이터를 조회할 수 없습니다.", error.details); }
+      const diagnostics = [], sources = {};
+      // Worst case: 13 remote snapshot + 13 bundled reads + 22 Yahoo attempts = 48.
+      const budget = { remaining: 22 };
+      const upstreamDiagnostics = [];
+      try {
+        const result = await analyzeRisk(payload, { prices: {} }, async (symbol, lookback) => {
+          try { return await riskHistory(symbol, lookback, request, env, diagnostics, sources, budget); }
+          catch (error) { upstreamDiagnostics.push({ symbol, ...(error.details || {}) }); throw error; }
+        });
+        const published = Object.values(sources).some(item => item.kind === "scheduled_daily_snapshot");
+        const provider = published ? "Scheduled daily adjusted-price snapshot / Yahoo direct fallback" : "Yahoo Finance chart adjusted close";
+        Object.assign(result.data, { provider, source: provider, source_name: provider, source_by_symbol: sources,
+          source_disclosure: { ...result.data.source_disclosure, source_name: provider } });
+        result.warnings.push(...diagnostics);
+        result.data.warnings_count = result.warnings.length;
+        return json(result);
+      }
+      catch (error) { if (error instanceof ApiError) throw error; throw new ApiError(Number.isInteger(error.status) && error.status >= 400 && error.status <= 599 ? error.status : 502, error.code || "risk_analysis_unavailable", error.message || "위험 분석 데이터를 조회할 수 없습니다.", { ...(error.details || {}), ...(upstreamDiagnostics.length ? { upstream_diagnostics: upstreamDiagnostics } : {}) }); }
     }
     throw new ApiError(405, "method_not_allowed", "이 경로는 POST 요청을 지원하지 않습니다.");
   }

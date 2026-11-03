@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
+from math import isfinite
 from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +34,15 @@ from quant_engine.service import (
 )
 
 EXPORT_FORMAT = "sp500-quant-cloud-v1"
+RISK_NAMESPACE = "cloud_risk_daily_v1"
+EXTRA_ASSETS = {
+    "SPY": "SPDR S&P 500 ETF", "TLT": "iShares 20+ Year Treasury Bond ETF",
+    "LQD": "iShares Investment Grade Corporate Bond ETF", "VCIT": "Vanguard Intermediate-Term Corporate Bond ETF",
+    "GLD": "SPDR Gold Shares", "QQQ": "Invesco QQQ Trust", "IVV": "iShares Core S&P 500 ETF",
+    "VOO": "Vanguard S&P 500 ETF", "SGOV": "iShares 0-3 Month Treasury Bond ETF",
+    "BND": "Vanguard Total Bond Market ETF", "SCHD": "Schwab US Dividend Equity ETF",
+}
+RISK_SYMBOLS = tuple(dict.fromkeys([*EXTRA_ASSETS, "AAPL", "MSFT", "GOOG", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "CVX", "PEP", "SPGI", "KMB", "PRU", "WFC", "PG", "VICI"]))
 PORTFOLIO_NAMESPACE = "cloud_public_portfolio_v1"
 _SYMBOL = re.compile(r"^[A-Z0-9^][A-Z0-9.^=-]{0,19}$")
 _LOCAL_PATH = re.compile(
@@ -105,7 +116,7 @@ def _validate_output(output: Path) -> None:
             raise ValueError("Refusing to overwrite a nonempty directory without an exporter manifest.") from None
         if not isinstance(manifest, dict) or manifest.get("format") != EXPORT_FORMAT:
             raise ValueError("Existing directory is not a managed cloud snapshot export.")
-    for subdirectory in ("stocks", "histories"):
+    for subdirectory in ("stocks", "histories", "risk"):
         target = output / subdirectory
         if target.is_symlink() or (target.exists() and not target.is_dir()):
             raise ValueError(f"Unsafe export subdirectory: {subdirectory}")
@@ -116,7 +127,8 @@ def refresh_public_portfolio(service: SignalService) -> dict[str, str]:
     from portfolio_service import KrxCatalogProvider, NaverGoldProvider, YahooFinanceProvider, filter_kospi_rows
 
     status = {}
-    for key, fetch in (("usd_krw", lambda: YahooFinanceProvider().get_usdkrw()), ("gold", lambda: NaverGoldProvider().quote()), ("catalog", lambda: KrxCatalogProvider().get_catalog())):
+    provider = YahooFinanceProvider()
+    for key, fetch in (("usd_krw", lambda: provider.get_usdkrw()), ("gold", lambda: NaverGoldProvider().quote()), ("catalog", lambda: KrxCatalogProvider().get_catalog())):
         try:
             value = fetch()
             if key == "catalog":
@@ -128,6 +140,15 @@ def refresh_public_portfolio(service: SignalService) -> dict[str, str]:
         except Exception as exc:
             # Preserve any previous successful cache, expose no private exception text.
             status[key] = f"failed:{type(exc).__name__}"
+    def fetch_quote(symbol):
+        try:
+            value = provider.quote(symbol)
+            if isinstance(value.price, (int, float)) and isfinite(value.price) and value.price > 0 and isinstance(value.as_of, str):
+                service.cache.put(PORTFOLIO_NAMESPACE, f"quote:{symbol}", {"price": value.price, "currency": value.currency, "as_of": value.as_of, "source": value.source.to_dict()})
+        except Exception:
+            pass  # Preserve previous timestamped public quotes on partial failure.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(fetch_quote, [*EXTRA_ASSETS, "005930.KS", "000660.KS", "035420.KS", "035720.KS"]))
     return status
 
 
@@ -180,6 +201,13 @@ def export_snapshot(
         except Exception as exc:
             benchmark_status = f"failed:{type(exc).__name__}"
     portfolio_refresh_status = refresh_public_portfolio(service) if portfolio_refresh else {}
+    if portfolio_refresh:
+        try:
+            for symbol, history in service.provider.fetch_price_history(RISK_SYMBOLS, period="5y").items():
+                if history.adjusted_closes:
+                    service.cache.put(RISK_NAMESPACE, symbol, history.to_dict(), source_as_of=history.dates[-1], schema_version=1)
+        except Exception as exc:
+            portfolio_refresh_status["risk_prices"] = f"failed:{type(exc).__name__}"
 
     generated_at = utc_now_iso()
     assets: dict[str, Any] = {
@@ -199,6 +227,7 @@ def export_snapshot(
         history, daily = cached_history(service, symbol)
         assets[f"histories/{symbol}.json"] = history
         prices[symbol] = daily
+        assets[f"risk/{symbol}.json"] = {"symbol": symbol, "frequency": "daily", "adjusted": True, "prices": daily, "source": "Yahoo adjusted daily chart cache", "as_of": daily[-1]["date"] if daily else None}
         history_counts[history["cache_status"]] += 1
         metric = signal.metrics.get("current_price")
         quotes[symbol] = {
@@ -229,6 +258,25 @@ def export_snapshot(
             }
 
     fx_quote = quotes.get("USDKRW=X") or quotes.get("KRW=X") or {}
+    for symbol in [*EXTRA_ASSETS, "005930.KS", "000660.KS", "035420.KS", "035720.KS"]:
+        quote_record = service.cache.get(PORTFOLIO_NAMESPACE, f"quote:{symbol}", max_age_seconds=service.price_ttl_seconds)
+        if quote_record:
+            quotes[symbol] = dict(quote_record.payload)
+    for symbol in RISK_SYMBOLS:
+        record = service.cache.get(RISK_NAMESPACE, symbol, max_age_seconds=service.price_ttl_seconds)
+        if not record:
+            continue
+        history = PriceHistory.from_dict(record.payload)
+        daily = [{"date": day, "value": close} for day, close in zip(history.dates, history.adjusted_closes) if close > 0]
+        prices[symbol] = daily
+        assets[f"risk/{symbol}.json"] = {"symbol": symbol, "frequency": "daily", "adjusted": True, "prices": daily, "source": "Yahoo Finance via yfinance; adjusted daily close", "as_of": daily[-1]["date"] if daily else None}
+        if symbol in EXTRA_ASSETS and daily:
+            # Adjusted prices are valid for returns, not a raw current quote.
+            # The latest adjustment factor normally equals one, but do not assume it.
+            metric_record = service.cache.get(PRICE_NAMESPACE, symbol, max_age_seconds=service.price_ttl_seconds)
+            raw_metric = metric_record.payload.get("current_price", {}) if metric_record else {}
+            if raw_metric.get("value") is not None:
+                quotes[symbol] = {"price": raw_metric["value"], "currency": "USD", "as_of": raw_metric.get("as_of"), "source": {"provider": "Yahoo price metrics cache"}}
     fx = {"symbol": "USDKRW=X", "rate": fx_quote.get("price"), "as_of": fx_quote.get("as_of"), "status": fx_quote.get("status", "missing")}
     assets["market-data.json"] = {"generated_at": generated_at, "source": "cached", "quotes": quotes, "prices": prices, "fx": fx}
     assets["portfolio.json"] = {
@@ -238,6 +286,7 @@ def export_snapshot(
         "usd_krw": {"value": fx["rate"], "as_of": fx["as_of"], "source": {"provider": "screening cache", "status": fx["status"], "cache_only": True}},
         "gold": {"price": None, "as_of": None, "source": {"status": "missing", "cache_only": True}},
     }
+    assets["portfolio.json"]["catalog"].extend({"symbol": symbol, "name": name, "market": "us", "currency": "USD", "quantity_unit": "share", "asset_type": "ETF"} for symbol, name in EXTRA_ASSETS.items() if symbol not in symbols)
     for key in ("usd_krw", "gold", "catalog"):
         record = service.cache.get(PORTFOLIO_NAMESPACE, key, max_age_seconds=86400)
         if record:
