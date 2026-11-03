@@ -10,7 +10,7 @@
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Vanilla JavaScript" src="https://img.shields.io/badge/UI-Vanilla%20JavaScript-F7DF1E?logo=javascript&logoColor=111111">
   <img alt="Android API 24+" src="https://img.shields.io/badge/Android-API%2024%2B-3DDC84?logo=android&logoColor=white">
-  <img alt="85 tests passing" src="https://img.shields.io/badge/tests-85%20passing-2E7D32">
+  <img alt="93 Python and 40 cloud tests passing" src="https://img.shields.io/badge/tests-93%20Python%20%2B%2040%20cloud-2E7D32">
   <img alt="Research only" src="https://img.shields.io/badge/use-research%20only-B76E22">
 </p>
 
@@ -23,6 +23,8 @@
 ## 목차
 
 **PC 없이 무료 클라우드 운영:** [Cloudflare 배포·예약 수집 안내](docs/CLOUDFLARE.md). 기존 로컬 실행도 그대로 지원합니다.
+
+배포 주소: **[S&P 500 퀀트 시그널](https://sp500-quant-signal.rlagusxo96652.workers.dev)** · 데이터는 GitHub Actions가 예약 수집하고 Cloudflare가 제공합니다. PC 전원과 관계없이 접속할 수 있습니다.
 
 - [프로젝트 개요](#프로젝트-개요)
 - [화면 둘러보기](#화면-둘러보기)
@@ -59,7 +61,7 @@ S&P 500 구성 종목을 동일한 정량 규칙으로 계산해 조사 우선�
 | 리스크 분석 | 2~12개 미국 자산의 변동성·낙폭·베타·VaR·ES·위험기여·상관 |
 | 실행 형태 | 로컬 웹/PWA + Android WebView 클라이언트 |
 | 저장 | 서버 데이터는 SQLite 캐시, 포트 입력은 브라우저 `localStorage` |
-| 현재 QA | Python 단위·계약 테스트 85개 + JavaScript 구문 검사 + 실제 브라우저 화면 검수 |
+| 현재 QA | Python 단위·계약 테스트 93개 + 클라우드 처리 테스트 40개 + 실제 배포 검수 |
 
 이 서비스는 자동 주문, 목표가 산출, 수익 보장 또는 개인화 투자자문을 제공하지 않습니다.
 
@@ -476,7 +478,7 @@ sp500-quant-signal/
 ├── web/                       # 정적 HTML/CSS/JavaScript·PWA
 ├── android-app/               # Android WebView 앱과 빌드 스크립트
 ├── .github/workflows/ci.yml   # Python 테스트와 JavaScript 구문 검사
-├── tests/                     # 85개 Python 단위·계약 테스트
+├── tests/                     # Python 단위·계약 테스트
 ├── docs/
 │   ├── screenshots/           # README용 실제 화면 캡처
 │   ├── ARCHITECTURE.md

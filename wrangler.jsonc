@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sp500-quant-signal",
+  "account_id": "7dc6543cbbdd3bcb1a9baa77da04a38d",
   "main": "cloudflare/worker.mjs",
   "compatibility_date": "2026-11-03",
   "workers_dev": true,

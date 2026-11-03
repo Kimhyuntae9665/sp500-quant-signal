@@ -60,8 +60,8 @@ test("snapshot remote URL is fixed and fallback is explicitly labelled", async (
   const environment = { ...env(), DATA_BASE_URL: "https://kimhyuntae9665.github.io/sp500-quant-signal/data/" };
   globalThis.fetch = async (url, options) => {
     assert.equal(url.href, `${environment.DATA_BASE_URL}dashboard.json`);
-    assert.equal(options.redirect, "error");
-    assert.equal(options.cf.cacheTtl, 300);
+    assert.equal(options.redirect, "manual");
+    assert.deepEqual(options.cf.cacheTtlByStatus, { "200-299": 300, "400-599": 0 });
     return new Response(JSON.stringify({ generated_at: "2026-11-01T00:00:00Z" }));
   };
   let result = await call("/api/dashboard", undefined, environment);
@@ -115,7 +115,7 @@ test("non-SP500 US search uses only fixed Yahoo endpoint and filters foreign ins
     assert.equal(url.origin, "https://query1.finance.yahoo.com");
     assert.equal(url.pathname, "/v1/finance/search");
     assert.equal(url.searchParams.get("q"), "test");
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     return new Response(JSON.stringify({ quotes: [
       { symbol: "SMALL", longname: "Small US Corp", quoteType: "EQUITY", exchange: "NMS" },
       { symbol: "005930.KS", quoteType: "EQUITY", exchange: "KSC" },
@@ -144,7 +144,7 @@ test("live valuation fetches arbitrary valid US ticker and FX without user-contr
   globalThis.fetch = async (url, options) => {
     seen.push(url.href);
     assert.equal(url.hostname, "query1.finance.yahoo.com");
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     return new Response(JSON.stringify({ chart: { result: [{ meta: {
       currency: url.pathname.endsWith("KRW%3DX") ? "KRW" : "USD", regularMarketPrice: url.pathname.endsWith("KRW%3DX") ? 1400 : 10,
       regularMarketTime: 1793386800,
@@ -167,7 +167,7 @@ test("Yahoo sends browser user agent, retries only query2, and exposes safe stat
   globalThis.fetch = async (url, options) => {
     hosts.push(url.hostname);
     assert.match(options.headers["User-Agent"], /^Mozilla\/5\.0/);
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     return url.hostname === "query1.finance.yahoo.com" ? new Response("private upstream details not forwarded", { status: 429 })
       : new Response(JSON.stringify({ quotes: [{ symbol: "TLT", shortname: "Treasury ETF", exchange: "NGM", quoteType: "ETF" }] }));
   };
@@ -217,7 +217,7 @@ test("risk missing-snapshot retries remain below fifty total subrequests", async
 test("domestic gold is read only from fixed Naver instrument with its source date", async () => {
   globalThis.fetch = async (url, options) => {
     assert.equal(url, "https://m.stock.naver.com/marketindex/metals/M04020000");
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     return new Response('<html><script id="__NEXT_DATA__" type="application/json">{"props":{"gold":{"reutersCode":"M04020000","closePrice":"123,000","localTradedAt":"2026-10-30 15:30:00"}}}</script></html>');
   };
   const { data } = await call("/api/portfolio/compose", { holdings: [holding("M04020000", "gold", 3)] }, env({ "/data/portfolio.json": {} }));
@@ -233,7 +233,7 @@ test("Risk Lab endpoint runs JavaScript statistics from fixed adjusted-price sou
     assert.equal(url.origin, "https://query1.finance.yahoo.com");
     assert.match(url.pathname, /^\/v8\/finance\/chart\/(AAA|BBB|SPY)$/);
     assert.equal(url.searchParams.get("range"), "5y");
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     return new Response(JSON.stringify({ chart: { result: [{ meta: { currency: "USD" }, timestamp: dates,
       indicators: { adjclose: [{ adjclose: dates.map((_, index) => 100 + index + index % 2) }] } }] } }));
   };

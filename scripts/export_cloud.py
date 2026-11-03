@@ -15,6 +15,8 @@ import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from math import isfinite
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +69,22 @@ def public_json(value: Any) -> Any:
     return value
 
 
+def completed_daily(history: PriceHistory) -> list[dict[str, Any]]:
+    """Do not promote a partial bar to a close when a cached snapshot ages."""
+    captured = history.provenance.retrieved_at
+    try:
+        clock = datetime.fromisoformat(captured.replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
+    except (ValueError, TypeError, AttributeError):
+        clock = datetime.now(ZoneInfo("America/New_York"))
+    capture_date = clock.date().isoformat()
+    settled = clock.hour * 60 + clock.minute >= 16 * 60 + 15
+    return [
+        {"date": day, "value": close}
+        for day, close in zip(history.dates, history.adjusted_closes)
+        if close > 0 and day <= capture_date and (day < capture_date or settled)
+    ]
+
+
 def cached_history(service: SignalService, symbol: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Use the engine's chart serializer without invoking its fetching method."""
     record = service.cache.get(
@@ -95,11 +113,7 @@ def cached_history(service: SignalService, symbol: str) -> tuple[dict[str, Any],
         ),
         valuation_cache_status=("fresh" if valuation.fresh else "stale") if valid_valuation else "miss",
     )
-    daily = [
-        {"date": day, "value": close}
-        for day, close in zip(history.dates, history.adjusted_closes)
-        if close > 0
-    ]
+    daily = completed_daily(history)
     return payload, daily
 
 
@@ -250,7 +264,7 @@ def export_snapshot(
                 "as_of": metric.get("as_of"), "status": "ok" if record.fresh else "stale",
                 "source": {"provider": "screening cache", "cache_only": True},
             }
-        elif daily:
+        elif daily and symbol != "SPY":
             quotes[symbol] = {
                 "price": daily[-1]["value"], "currency": "KRW" if symbol != "SPY" else "USD",
                 "as_of": daily[-1]["date"], "status": "stale",
@@ -262,20 +276,22 @@ def export_snapshot(
         quote_record = service.cache.get(PORTFOLIO_NAMESPACE, f"quote:{symbol}", max_age_seconds=service.price_ttl_seconds)
         if quote_record:
             quotes[symbol] = dict(quote_record.payload)
+            if symbol.endswith(".KS"):
+                quotes[f"kospi:{symbol[:-3]}"] = dict(quote_record.payload)
     for symbol in RISK_SYMBOLS:
         record = service.cache.get(RISK_NAMESPACE, symbol, max_age_seconds=service.price_ttl_seconds)
         if not record:
             continue
         history = PriceHistory.from_dict(record.payload)
-        daily = [{"date": day, "value": close} for day, close in zip(history.dates, history.adjusted_closes) if close > 0]
+        daily = completed_daily(history)
         prices[symbol] = daily
-        assets[f"risk/{symbol}.json"] = {"symbol": symbol, "frequency": "daily", "adjusted": True, "prices": daily, "source": "Yahoo Finance via yfinance; adjusted daily close", "as_of": daily[-1]["date"] if daily else None}
+        assets[f"risk/{symbol}.json"] = {"symbol": symbol, "frequency": "daily", "adjusted": True, "prices": daily, "retrieved_at": history.provenance.retrieved_at, "session_policy": "completed_at_collection_1615_ET", "source": "Yahoo Finance via yfinance; adjusted daily close", "as_of": daily[-1]["date"] if daily else None}
         if symbol in EXTRA_ASSETS and daily:
             # Adjusted prices are valid for returns, not a raw current quote.
             # The latest adjustment factor normally equals one, but do not assume it.
             metric_record = service.cache.get(PRICE_NAMESPACE, symbol, max_age_seconds=service.price_ttl_seconds)
-            raw_metric = metric_record.payload.get("current_price", {}) if metric_record else {}
-            if raw_metric.get("value") is not None:
+            raw_metric = metric_record.payload.get("current_price", {}) if metric_record and metric_record.schema_version >= PRICE_SCHEMA_VERSION else {}
+            if symbol not in quotes and raw_metric.get("value") is not None:
                 quotes[symbol] = {"price": raw_metric["value"], "currency": "USD", "as_of": raw_metric.get("as_of"), "source": {"provider": "Yahoo price metrics cache"}}
     fx = {"symbol": "USDKRW=X", "rate": fx_quote.get("price"), "as_of": fx_quote.get("as_of"), "status": fx_quote.get("status", "missing")}
     assets["market-data.json"] = {"generated_at": generated_at, "source": "cached", "quotes": quotes, "prices": prices, "fx": fx}

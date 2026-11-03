@@ -49,17 +49,19 @@ function ticker(value) {
 async function asset(env, request, path, optional = false) {
   const trustedBase = "https://kimhyuntae9665.github.io/sp500-quant-signal/data/";
   let fallbackWarning = null;
+  let upstreamStatus = null;
   if (env.DATA_BASE_URL) {
     if (env.DATA_BASE_URL !== trustedBase) throw new ApiError(503, "snapshot_configuration_invalid", "허용된 공개 스냅샷 경로 설정을 확인하세요.");
     try {
       const remote = await fetch(new URL(path.slice("/data/".length), trustedBase), {
-        redirect: "error", signal: AbortSignal.timeout(5000), cf: { cacheTtl: 300, cacheEverything: true }, headers: { Accept: "application/json" },
+        redirect: "manual", signal: AbortSignal.timeout(8000), cf: { cacheTtlByStatus: { "200-299": 300, "400-599": 0 }, cacheEverything: true }, headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; QuantSignal/1.0)" },
       });
+      upstreamStatus = remote.status;
       if (!remote.ok) throw new Error("Snapshot unavailable");
       const result = await remote.json();
       if (!object(result)) throw new Error("Invalid snapshot");
       return { ...result, cloud_snapshot: { source: "github_pages", bundled_fallback: false, cache_ttl_seconds: 300 } };
-    } catch { fallbackWarning = "최신 공개 스냅샷에 연결하지 못해 배포 시 포함된 데이터를 사용합니다. 기준일이 오래되었을 수 있습니다."; }
+    } catch (error) { upstreamStatus ??= error.name; fallbackWarning = "최신 공개 스냅샷에 연결하지 못해 배포 시 포함된 데이터를 사용합니다. 기준일이 오래되었을 수 있습니다."; }
   }
   const response = await env.ASSETS.fetch(new Request(new URL(path, request.url), { method: "GET" }));
   if (!response.ok) {
@@ -69,7 +71,7 @@ async function asset(env, request, path, optional = false) {
   try {
     const result = await response.json();
     if (!object(result)) throw new Error("Invalid snapshot");
-    return { ...result, cloud_snapshot: { source: "bundled_assets", bundled_fallback: Boolean(fallbackWarning), warning: fallbackWarning },
+    return { ...result, cloud_snapshot: { source: "bundled_assets", bundled_fallback: Boolean(fallbackWarning), warning: fallbackWarning, upstream_status: upstreamStatus },
       ...(fallbackWarning ? { warnings: [...(Array.isArray(result.warnings) ? result.warnings : []), fallbackWarning] } : {}) };
   } catch { throw new ApiError(503, "snapshot_invalid", "수집 데이터 형식을 확인할 수 없습니다."); }
 }
@@ -113,7 +115,7 @@ async function yahoo(path, params, budget = { remaining: 2 }) {
     const url = new URL(path, `https://${host}`);
     for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
     try {
-      const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(6000), headers: {
+      const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(6000), headers: {
         Accept: "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       } });
       attempts.push({ host, status: response.status });
@@ -146,7 +148,7 @@ async function liveQuote(symbol, currency) {
 }
 async function liveGold() {
   const url = "https://m.stock.naver.com/marketindex/metals/M04020000";
-  const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(8000), headers: { Accept: "text/html", "Accept-Language": "ko-KR" } });
+  const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(8000), headers: { Accept: "text/html", "Accept-Language": "ko-KR" } });
   if (!response.ok) return null;
   const document = await response.text();
   const match = document.match(/<script\b[^>]*\bid=["']__NEXT_DATA__["'][^>]*>(.*?)<\/script>/s);

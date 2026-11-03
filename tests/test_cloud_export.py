@@ -11,7 +11,7 @@ from quant_engine.cache import SQLiteCache
 from quant_engine.models import PriceHistory, Provenance, UniverseMember, UniverseSnapshot
 from quant_engine.scoring import calculate_price_metrics
 from quant_engine.service import CHART_HISTORY_NAMESPACE, PRICE_NAMESPACE, PRICE_SCHEMA_VERSION, SignalService
-from scripts.export_cloud import EXPORT_FORMAT, export_snapshot, public_json
+from scripts.export_cloud import EXPORT_FORMAT, export_snapshot, public_json, completed_daily
 
 
 class FixtureUniverse:
@@ -77,7 +77,7 @@ class CloudExportTests(unittest.TestCase):
         self.assertEqual(self.read("histories/BRK.B.json")["series"]["adjusted_close"], [])
         self.assertEqual(self.read("histories/BRK.B.json")["valuation"]["cache_status"], "miss")
         market = self.read("market-data.json")
-        self.assertEqual(market["prices"]["SPY"][-1], {"date": "2026-01-03", "value": 101.0})
+        self.assertEqual(market["prices"]["SPY"][-1], {"date": "2026-01-02", "value": 102.0})
         self.assertIsNone(market["fx"]["rate"])
         portfolio = self.read("portfolio.json")
         self.assertEqual(portfolio["catalog"][0]["market"], "us")
@@ -108,6 +108,12 @@ class CloudExportTests(unittest.TestCase):
         with patch.object(self.service, "get_chart_history", return_value={}) as history:
             export_snapshot(self.service, self.output, history_limit=1)
             history.assert_called_once_with("BRK.B")
+
+    def test_snapshot_partial_bar_never_becomes_completed_as_cache_ages(self):
+        history = PriceHistory(symbol="SPY", dates=("2026-07-09", "2026-07-10"), adjusted_closes=(100, 101), provenance=Provenance(source="fixture", retrieved_at="2026-07-10T18:00:00Z"))
+        self.assertEqual(completed_daily(history), [{"date": "2026-07-09", "value": 100}])
+        settled = PriceHistory(symbol="SPY", dates=history.dates, adjusted_closes=history.adjusted_closes, provenance=Provenance(source="fixture", retrieved_at="2026-07-10T20:15:00Z"))
+        self.assertEqual(len(completed_daily(settled)), 2)
 
     def test_portfolio_refresh_persists_public_data_for_offline_exports(self):
         source = Mock()
