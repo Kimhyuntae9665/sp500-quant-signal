@@ -36,3 +36,5 @@ jobs:
         run: |
           node --check web/app.js
           node --check web/gs-lab.js
+      - name: Test Cloudflare runtime
+        run: node --test cloudflare/worker.test.mjs cloudflare/risk.test.mjs

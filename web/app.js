@@ -605,6 +605,20 @@
       el.environmentBanner.hidden = true;
       el.globalAlert.hidden = true;
       renderDashboard();
+      if (dashboard.refresh?.mode === "cloud_scheduled") {
+        document.querySelectorAll(".refresh-mode-control").forEach((node) => { node.hidden = true; });
+        el.refreshButton.querySelector("span").textContent = "최신 결과 보기";
+        el.mobileRefreshButton.querySelector("span").textContent = "결과 보기";
+        let notice = document.getElementById("cloud-snapshot-notice");
+        if (!notice) {
+          notice = document.createElement("p");
+          notice.id = "cloud-snapshot-notice";
+          notice.setAttribute("role", "status");
+          notice.style.cssText = "margin:0;padding:10px 24px;background:#eef4fb;color:#254569;font-size:13px;line-height:1.6;text-align:center";
+          document.querySelector(".app-header").after(notice);
+        }
+        notice.textContent = payload.cloud_snapshot?.warning || "클라우드 예약 갱신 · 미국장 중간 2회와 마감 후 수집 · 각 지표의 기준일을 확인하세요. 최신 결과 보기는 저장된 결과를 다시 읽습니다.";
+      }
       syncRefreshFromServer(dashboard.refresh);
       return true;
     } catch (error) {
@@ -4035,6 +4049,11 @@
   }
 
   async function refreshData() {
+    if (state.dashboard?.refresh?.mode === "cloud_scheduled") {
+      const ok = await loadDashboard({ silent: true, preserveExisting: true });
+      showToast(ok ? "저장된 클라우드 결과를 다시 읽었습니다. 데이터 기준일을 확인하세요." : "클라우드 결과를 읽지 못했습니다.", !ok);
+      return;
+    }
     if (state.refreshing) {
       showToast("이미 데이터 갱신이 진행 중입니다.");
       return;

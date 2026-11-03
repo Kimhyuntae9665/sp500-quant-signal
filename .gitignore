@@ -48,3 +48,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+node_modules/
+.wrangler/
+.dev.vars
