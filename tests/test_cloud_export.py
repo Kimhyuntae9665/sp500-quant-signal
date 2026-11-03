@@ -114,6 +114,8 @@ class CloudExportTests(unittest.TestCase):
         self.assertEqual(completed_daily(history), [{"date": "2026-07-09", "value": 100}])
         settled = PriceHistory(symbol="SPY", dates=history.dates, adjusted_closes=history.adjusted_closes, provenance=Provenance(source="fixture", retrieved_at="2026-07-10T20:15:00Z"))
         self.assertEqual(len(completed_daily(settled)), 2)
+        unknown = PriceHistory(symbol="SPY", dates=history.dates, adjusted_closes=history.adjusted_closes, provenance=Provenance(source="legacy", retrieved_at=""))
+        self.assertEqual(completed_daily(unknown), [{"date": "2026-07-09", "value": 100}])
 
     def test_portfolio_refresh_persists_public_data_for_offline_exports(self):
         source = Mock()

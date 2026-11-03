@@ -75,7 +75,13 @@ def completed_daily(history: PriceHistory) -> list[dict[str, Any]]:
     try:
         clock = datetime.fromisoformat(captured.replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
     except (ValueError, TypeError, AttributeError):
-        clock = datetime.now(ZoneInfo("America/New_York"))
+        if not history.dates:
+            return []
+        # A legacy cache without collection time cannot prove its final bar
+        # was collected after close. Conservatively withhold that date.
+        last_date = max(history.dates)
+        today = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
+        return [{"date": day, "value": close} for day, close in zip(history.dates, history.adjusted_closes) if close > 0 and day < last_date and day <= today]
     capture_date = clock.date().isoformat()
     settled = clock.hour * 60 + clock.minute >= 16 * 60 + 15
     return [
